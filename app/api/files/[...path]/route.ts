@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest, { params }: { params: { path: string[] } }) {
