@@ -33,9 +33,27 @@ async function handleRequest(request: NextRequest, path: string[]) {
   // // 如果请求由浏览器窗口中发起
   // if(decodedUrl){
   //   console.log('decodedUrl',decodedUrl);
+
+
+
+    let tempDomain, spilt_str;
+    let tempurl = new URL(request.url);
     
-    const url = new URL(request.url.split("/api/forward/")[1]);
-  
+    // 获取初始的域名
+    tempDomain = tempurl.hostname;
+    spilt_str = tempDomain + "/api/forward/";
+    
+    // 循环查找直到不能找到 /api/forward/ 为止
+    while (request.url.includes(spilt_str)) {
+        // 获取下一个 URL 部分
+        const tempPath = request.url.split("/api/forward/")[1];
+        
+        // 更新 URL 和 spilt_str
+        const url = new URL(tempPath);
+        
+        // 更新 request.url，继续循环
+        request.url = url.href;
+    }
     // 获取协议头
     const protocol = url.protocol
   
