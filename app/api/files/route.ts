@@ -22,16 +22,10 @@ export async function OPTIONS(request: NextRequest) {
   })
 }
 
-async function handleRequest(request: NextRequest, path: string[]) {
-  const url = new URL(request.url)
-  const searchParams = url.searchParams
-  
-  // 获取domain参数
-  const domain = searchParams.get('domain')
+async function handleRequest(request: NextRequest) {
 
-  // Construct the target URL
-  const targetDomain = domain || 'video-202501.pages.dev'
-  const targetUrl = `https://${targetDomain}/${path.join("/")}${url.search}`
+  // 解码url
+  const decodedUrl = decodeURIComponent(request.url.split("?url=")[1]);
 
   // Prepare fetch options
   const options: RequestInit = {
@@ -45,7 +39,7 @@ async function handleRequest(request: NextRequest, path: string[]) {
   }
 
   // Forward the request to the target URL
-  const response = await fetch(targetUrl, options)
+  const response = await fetch(decodedUrl, options)
 
   // Prepare new headers with CORS
   const newHeaders = new Headers(response.headers)
