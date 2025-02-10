@@ -24,34 +24,17 @@ export async function OPTIONS(request: NextRequest) {
 
 async function handleRequest(request: NextRequest, path: string[]) {
 
-  // 解码url
-  const decodedUrl = decodeURIComponent(request.url.split("?url=")[1]);
+  // // 解码url
+  // const decodedUrl = decodeURIComponent(request.url.split("?url=")[1]);
 
-  // 构造请求url
+  // // 构造请求url
   let targetUrl;
 
-  // 如果请求由浏览器内部发起
-  if(!decodedUrl){
+  // // 如果请求由浏览器窗口中发起
+  // if(decodedUrl){
+  //   console.log('decodedUrl',decodedUrl);
+    
     const url = new URL(request.url.split("/api/forward/")[1]);
-  
-    // 获取协议头
-    const protocol = url.protocol
-  
-    // 获取domain参数
-    const domain = url.hostname
-  
-    // 路径名
-    const pathname = url.pathname
-  
-    // 后缀
-    const search = url.search
-
-    targetUrl = `${protocol}//${domain}/${path.join("/")}${search}`;
-  }
-  // 否则认为外部窗口发起
-  else
-  {
-    const url = new URL(decodedUrl);
   
     // 获取协议头
     const protocol = url.protocol
@@ -66,7 +49,29 @@ async function handleRequest(request: NextRequest, path: string[]) {
     const search = url.search
   
     targetUrl = `${protocol}//${domain}${pathname}${search}`
-  }
+    
+  // }
+  // // 否则认为浏览器主动发起
+  // else
+  // {
+  //   console.log('not decodedUrl');
+    
+  //   const url = new URL(request.url.split("/api/forward/")[1]);
+  
+  //   // 获取协议头
+  //   const protocol = url.protocol
+  
+  //   // 获取domain参数
+  //   const domain = url.hostname
+  
+  //   // 路径名
+  //   const pathname = url.pathname
+  
+  //   // 后缀
+  //   const search = url.search
+
+  //   targetUrl = `${protocol}//${domain}/${path.join("/")}${search}`;
+  // }
 
   console.log('打印日志',targetUrl);
   
