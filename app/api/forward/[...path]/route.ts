@@ -26,21 +26,46 @@ async function handleRequest(request: NextRequest, path: string[]) {
 
   // 解码url
   const decodedUrl = decodeURIComponent(request.url.split("?url=")[1]);
-  const url = new URL(decodedUrl);
 
-  // 获取domain参数
-  const domain = url.hostname
-
-  let targetUrl = `https://${domain}/${url.pathname}${url.search}`
+  // 构造请求url
+  let targetUrl;
 
   if(!decodedUrl){
-    const url = new URL(request.url);
+    const url = new URL(decodedUrl);
+  
+    // 获取协议头
+    const protocol =url.protocol.replace(':','')
+  
     // 获取domain参数
     const domain = url.hostname
-    // Construct the target URL
-    targetUrl = `https://${domain}/${path.join("/")}${url.search}`;
+  
+    // 路径名
+    const pathname = url.pathname
+  
+    // 后缀
+    const search = url.search
+
+    targetUrl = `${protocol}://${domain}/${path.join("/")}${search}`;
+  }else{
+    const url = new URL(request.url.split("/api/forward/")[1]);
+  
+    // 获取协议头
+    const protocol = url.protocol.replace(':','')
+  
+    // 获取domain参数
+    const domain = url.hostname
+  
+    // 路径名
+    const pathname = url.pathname
+  
+    // 后缀
+    const search = url.search
+  
+    targetUrl = `${protocol}://${domain}/${pathname}${search}`
   }
 
+  console.log('打印日志',targetUrl);
+  
   // Prepare fetch options
   const options: RequestInit = {
     method: request.method,
