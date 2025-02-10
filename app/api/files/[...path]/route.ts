@@ -24,9 +24,14 @@ export async function OPTIONS(request: NextRequest) {
 
 async function handleRequest(request: NextRequest, path: string[]) {
   const url = new URL(request.url)
+  const searchParams = url.searchParams
+  
+  // 获取domain参数
+  const domain = searchParams.get('domain')
 
   // Construct the target URL
-  const targetUrl = `https://video-202501.pages.dev/${path.join("/")}${url.search}`
+  const targetDomain = domain || 'video-202501.pages.dev'
+  const targetUrl = `https://${targetDomain}/${path.join("/")}${url.search}`
 
   // Prepare fetch options
   const options: RequestInit = {
@@ -70,4 +75,3 @@ async function handleRequest(request: NextRequest, path: string[]) {
     headers: newHeaders,
   })
 }
-
