@@ -26,12 +26,25 @@ async function handleRequest(request: NextRequest, path: string[]) {
   const url = new URL(request.url)
   const searchParams = url.searchParams
   
-  // 获取domain参数
-  const domain = searchParams.get('domain')
+  // 获取url参数
+  const oldTargetUrl =  searchParams.get('url');
+
+  let targetUrl: string | null = null;
+
+  let domain: string | null = null;   if (oldTargetUrl) {
+    try {
+      domain = new URL(oldTargetUrl).hostname; 
+
+    } catch (e) {
+      // Handle invalid URL cases (e.g., log an error)
+      console.error("Invalid URL:", oldTargetUrl);
+    }
+  }
 
   // Construct the target URL
   const targetDomain = domain || 'video-202501.pages.dev'
-  const targetUrl = `https://${targetDomain}/${path.join("/")}${url.search}`
+  
+  targetUrl = oldTargetUrl || `https://${targetDomain}/${path.join("/")}${url.search}`
 
   // Prepare fetch options
   const options: RequestInit = {
