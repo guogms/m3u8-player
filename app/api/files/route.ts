@@ -28,11 +28,10 @@ async function handleRequest(request: NextRequest, path: string[]) {
   const decodedUrl = decodeURIComponent(request.url.split("?url=")[1]);
   const url = new URL(decodedUrl);
 
-  const searchParams = url.searchParams
-  
+ 
   // 获取domain参数
-  const domain = searchParams.get('domain')
-  console.log('打印日志：',domain, url)
+  const domain = url.hostname
+  console.log('打印日志：',decodedUrl, path)
 
 
   const targetUrl = `https://${domain}/${path.join("/")}${url.search}`
