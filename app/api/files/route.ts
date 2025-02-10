@@ -22,10 +22,22 @@ export async function OPTIONS(request: NextRequest) {
   })
 }
 
-async function handleRequest(request: NextRequest) {
+async function handleRequest(request: NextRequest, path: string[]) {
 
   // 解码url
   const decodedUrl = decodeURIComponent(request.url.split("?url=")[1]);
+  const url = new URL(decodedUrl);
+
+  const searchParams = url.searchParams
+  
+  // 获取domain参数
+  const domain = searchParams.get('domain')
+  console.log('打印日志：',domain, url)
+
+
+  const targetUrl = `https://${domain}/${path.join("/")}${url.search}`
+
+  console.log('打印日志：',targetUrl, decodedUrl)
 
   // Prepare fetch options
   const options: RequestInit = {
@@ -39,7 +51,7 @@ async function handleRequest(request: NextRequest) {
   }
 
   // Forward the request to the target URL
-  const response = await fetch(decodedUrl, options)
+  const response = await fetch(targetUrl, options)
 
   // Prepare new headers with CORS
   const newHeaders = new Headers(response.headers)
