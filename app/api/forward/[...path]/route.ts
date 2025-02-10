@@ -65,7 +65,7 @@ async function handleRequest(request: NextRequest, path: string[]) {
     // 后缀
     const search = url.search
   
-    targetUrl = `${protocol}//${domain}/${pathname}${search}`
+    targetUrl = `${protocol}//${domain}${pathname}${search}`
   }
 
   console.log('打印日志',targetUrl);
