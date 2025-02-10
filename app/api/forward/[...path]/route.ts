@@ -30,11 +30,12 @@ async function handleRequest(request: NextRequest, path: string[]) {
   // 构造请求url
   let targetUrl;
 
+  // 如果请求由浏览器内部发起
   if(!decodedUrl){
     const url = new URL(decodedUrl);
   
     // 获取协议头
-    const protocol =url.protocol.replace(':','')
+    const protocol =url.protocol
   
     // 获取domain参数
     const domain = url.hostname
@@ -45,12 +46,15 @@ async function handleRequest(request: NextRequest, path: string[]) {
     // 后缀
     const search = url.search
 
-    targetUrl = `${protocol}://${domain}/${path.join("/")}${search}`;
-  }else{
+    targetUrl = `${protocol}//${domain}/${path.join("/")}${search}`;
+  }
+  // 否则认为外部窗口发起
+  else
+  {
     const url = new URL(request.url.split("/api/forward/")[1]);
   
     // 获取协议头
-    const protocol = url.protocol.replace(':','')
+    const protocol = url.protocol
   
     // 获取domain参数
     const domain = url.hostname
@@ -61,7 +65,7 @@ async function handleRequest(request: NextRequest, path: string[]) {
     // 后缀
     const search = url.search
   
-    targetUrl = `${protocol}://${domain}/${pathname}${search}`
+    targetUrl = `${protocol}//${domain}/${pathname}${search}`
   }
 
   console.log('打印日志',targetUrl);
