@@ -22,21 +22,24 @@ export async function OPTIONS(request: NextRequest) {
   })
 }
 
-async function handleRequest(request: NextRequest) {
+async function handleRequest(request: NextRequest, path: string[]) {
 
   // 解码url
   const decodedUrl = decodeURIComponent(request.url.split("?url=")[1]);
   const url = new URL(decodedUrl);
 
- 
   // 获取domain参数
   const domain = url.hostname
-  console.log('打印日志：', url.pathname)
 
+  let targetUrl = `https://${domain}/${url.pathname}${url.search}`
 
-  const targetUrl = `https://${domain}/${url.pathname}${url.search}`
-
-  console.log('打印日志：',targetUrl, decodedUrl)
+  if(!decodedUrl){
+    const url = new URL(request.url);
+    // 获取domain参数
+    const domain = url.hostname
+    // Construct the target URL
+    targetUrl = `https://${domain}/${path.join("/")}${url.search}`;
+  }
 
   // Prepare fetch options
   const options: RequestInit = {
