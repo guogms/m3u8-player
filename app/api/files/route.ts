@@ -22,7 +22,7 @@ export async function OPTIONS(request: NextRequest) {
   })
 }
 
-async function handleRequest(request: NextRequest, path: string[]) {
+async function handleRequest(request: NextRequest) {
 
   // 解码url
   const decodedUrl = decodeURIComponent(request.url.split("?url=")[1]);
@@ -31,10 +31,10 @@ async function handleRequest(request: NextRequest, path: string[]) {
  
   // 获取domain参数
   const domain = url.hostname
-  console.log('打印日志：',decodedUrl, path)
+  console.log('打印日志：', url.pathname)
 
 
-  const targetUrl = `https://${domain}/${path.join("/")}${url.search}`
+  const targetUrl = `https://${domain}/${url.pathname}${url.search}`
 
   console.log('打印日志：',targetUrl, decodedUrl)
 
