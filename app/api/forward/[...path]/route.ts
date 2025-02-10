@@ -37,34 +37,29 @@ async function handleRequest(request: NextRequest, path: string[]) {
 
 
     let tempDomain, spilt_str;
-    let tempurl = new URL(request.url);
+    let tempUrl = new URL(request.url);
     
     // 获取初始的域名
-    tempDomain = tempurl.hostname;
-    spilt_str = tempDomain + "/api/forward/";
+    tempDomain = tempUrl.origin;
+    spilt_str = tempDomain.split('//')[1] + "/api/forward/";
     
-    // 循环查找直到不能找到 /api/forward/ 为止
-    while (request.url.includes(spilt_str)) {
-        // 获取下一个 URL 部分
-        const tempPath = request.url.split("/api/forward/")[1];
-        
-        // 更新 URL 和 spilt_str
-        const url = new URL(tempPath);
-        
-        // 更新 request.url，继续循环
-        request.url = url.href;
+    const tempPath = tempUrl.href.split(spilt_str).pop();
+
+    if(tempPath){
+      tempUrl = new URL(tempPath);
     }
+    
     // 获取协议头
-    const protocol = url.protocol
+    const protocol = tempUrl.protocol
   
     // 获取domain参数
-    const domain = url.hostname
+    const domain = tempUrl.hostname
   
     // 路径名
-    const pathname = url.pathname
+    const pathname = tempUrl.pathname
   
     // 后缀
-    const search = url.search
+    const search = tempUrl.search
   
     targetUrl = `${protocol}//${domain}${pathname}${search}`
     
