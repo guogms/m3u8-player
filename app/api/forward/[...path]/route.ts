@@ -32,10 +32,10 @@ async function handleRequest(request: NextRequest, path: string[]) {
 
   // 如果请求由浏览器内部发起
   if(!decodedUrl){
-    const url = new URL(decodedUrl);
+    const url = new URL(request.url.split("/api/forward/")[1]);
   
     // 获取协议头
-    const protocol =url.protocol
+    const protocol = url.protocol
   
     // 获取domain参数
     const domain = url.hostname
@@ -51,7 +51,7 @@ async function handleRequest(request: NextRequest, path: string[]) {
   // 否则认为外部窗口发起
   else
   {
-    const url = new URL(request.url.split("/api/forward/")[1]);
+    const url = new URL(decodedUrl);
   
     // 获取协议头
     const protocol = url.protocol
