@@ -118,7 +118,7 @@ function rewriteHtmlUrls(tempUrl: URL, html: string): string | undefined {
         
       }
       else if (url.startsWith(tempUrl.origin)){
-        return `${attr}="/api/forward/${url}"`;
+        return `${attr}="/api/forward/////gagag///${url}"`;
       }
       return match;
     }).replace(/fetch\(["'](.*?)["']\)/gi, (match, url) => {
@@ -128,7 +128,7 @@ function rewriteHtmlUrls(tempUrl: URL, html: string): string | undefined {
         
       }
       else if (url.startsWith(tempUrl.origin)){
-        return `fetch("/api/forward/${url}"`;
+        return `fetch("/api/forward////gagag////${url}"`;
       }
       return match;
     });
