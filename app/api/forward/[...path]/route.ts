@@ -40,7 +40,7 @@ async function handleRequest(request: NextRequest, path: string[]) {
 
     targetUrl = decodeURIComponent(`${tempUrl.protocol}//${tempUrl.hostname}${tempUrl.pathname}${tempUrl.search}`);
 
-    console.log('请求转发到:', targetUrl);
+    // console.log('请求转发到:', targetUrl);
 
 
   } catch (error) {
@@ -110,26 +110,78 @@ async function handleRequest(request: NextRequest, path: string[]) {
 
 }
 
-function rewriteHtmlUrls(tempUrl: URL, html: string): string | undefined {
-  return html.replace(/(href|src|action)=["'](.*?)["']/gi, (match, attr, url) => {
-      if (url.startsWith("/")) {
-          // 如果是相对路径，拼接代理地址
-          return `${attr}="/api/forward/shezhi/${tempUrl.protocol}//${tempUrl.hostname}${url}"`;
-      }
-      else if (url.startsWith(tempUrl.origin)) {
-          // 如果是相同来源的 URL，拼接代理地址
-          return `${attr}="/api/forward/shezhi/${url}"`;
-      }
+function rewriteHtmlUrls(tempUrl: URL, html: string): string {
+  const rewriteAttributeUrls = (match: string, attr: string, url: string) => {
+    // 如果 URL 已经包含代理路径，跳过处理
+    if (url.includes('/api/forward/')) {
       return match;
-  }).replace(/fetch\(["'](.*?)["']\)/gi, (match, url) => {
-      if (url.startsWith("/")) {
-          // 如果是相对路径，拼接代理地址
-          return `fetch("/api/forward/shezhi/${tempUrl.protocol}//${tempUrl.hostname}${url}")`;
-      }
-      else if (url.startsWith(tempUrl.origin)) {
-          // 如果是相同来源的 URL，拼接代理地址
-          return `fetch("/api/forward/shezhi/${url}")`;
-      }
+    }
+
+    let rewrittenUrl = url;
+
+    // 处理绝对路径（包含协议）
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      rewrittenUrl = `/api/forward/${url}`;
+    }
+    // 处理协议相对路径（//example.com/path）
+    else if (url.startsWith('//')) {
+      rewrittenUrl = `/api/forward/${tempUrl.protocol}${url}`;
+    }
+    // 处理根相对路径（/path）
+    else if (url.startsWith('/')) {
+      rewrittenUrl = `/api/forward/${tempUrl.protocol}://${tempUrl.hostname}${url}`;
+    }
+    // 处理当前目录相对路径（./path 或 ../path）
+    else if (url.startsWith('./') || url.startsWith('../')) {
+      const cleanUrl = url.replace(/^(\.\/|\.\.\/)/, ''); // 移除开头的 './' 或 '../'
+      rewrittenUrl = `/api/forward/${tempUrl.protocol}://${tempUrl.hostname}/${cleanUrl}`;
+    }
+    // 处理其他相对路径
+    else {
+      rewrittenUrl = `/api/forward/${tempUrl.protocol}://${tempUrl.hostname}/${url}`;
+    }
+
+    return `${attr}="${rewrittenUrl}"`;
+  };
+
+  const rewriteFetchUrls = (match: string, url: string) => {
+    // 如果 URL 已经包含代理路径，跳过处理
+    if (url.includes('/api/forward/')) {
       return match;
-  });
+    }
+
+    let rewrittenUrl = url;
+
+    // 处理绝对路径（包含协议）
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      rewrittenUrl = `/api/forward/${url}`;
+    }
+    // 处理协议相对路径（//example.com/path）
+    else if (url.startsWith('//')) {
+      rewrittenUrl = `/api/forward/${tempUrl.protocol}${url}`;
+    }
+    // 处理根相对路径（/path）
+    else if (url.startsWith('/')) {
+      rewrittenUrl = `/api/forward/${tempUrl.protocol}://${tempUrl.hostname}${url}`;
+    }
+    // 处理当前目录相对路径（./path 或 ../path）
+    else if (url.startsWith('./') || url.startsWith('../')) {
+      const cleanUrl = url.replace(/^(\.\/|\.\.\/)/, ''); // 移除开头的 './' 或 '../'
+      rewrittenUrl = `/api/forward/${tempUrl.protocol}://${tempUrl.hostname}/${cleanUrl}`;
+    }
+    // 处理其他相对路径
+    else {
+      rewrittenUrl = `/api/forward/${tempUrl.protocol}://${tempUrl.hostname}/${url}`;
+    }
+
+    return `fetch("${rewrittenUrl}")`;
+  };
+
+  // 重写所有 href, src, action 属性
+  let rewrittenHtml = html.replace(/(href|src|action)=["'](.*?)["']/gi, rewriteAttributeUrls);
+  
+  // 重写所有 fetch 调用
+  rewrittenHtml = rewrittenHtml.replace(/fetch\(["'](.*?)["']\)/gi, rewriteFetchUrls);
+
+  return rewrittenHtml;
 }
