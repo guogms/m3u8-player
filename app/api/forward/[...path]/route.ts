@@ -24,22 +24,28 @@ export async function OPTIONS() {
 async function handleRequest(request: NextRequest, path: string[]) {
   let targetUrl;
 
+  
   try {
-    let tempUrl = new URL(request.url);
+    let tempUrl = new URL(decodeURIComponent(request.url));
     let tempDomain = tempUrl.origin;
     let spilt_str = tempDomain.split('//')[1] + "/api/forward/";
     const tempPath = tempUrl.href.split(spilt_str).pop();
+
+    
 
     if (tempPath) {
       tempUrl = new URL(tempPath);
     }
 
-    targetUrl = `${tempUrl.protocol}//${tempUrl.hostname}${tempUrl.pathname}${tempUrl.search}`;
+    targetUrl = decodeURIComponent(`${tempUrl.protocol}//${tempUrl.hostname}${tempUrl.pathname}${tempUrl.search}`);
+
+    console.log('请求转发到:', targetUrl);
+
+
   } catch (error) {
     return new NextResponse("Invalid URL", { status: 400 });
   }
 
-  // console.log('请求转发到:', targetUrl);
 
   // 复制请求头（避免某些 Header 影响转发）
   const headers = new Headers(request.headers);
@@ -55,6 +61,7 @@ async function handleRequest(request: NextRequest, path: string[]) {
   const response = await fetch(targetUrl, options);
   const contentType = response.headers.get("Content-Type") || "";
 
+  
   // 处理 HTML，替换网页中的资源地址为代理地址
   if (contentType.includes("text/html")) {
 
@@ -113,7 +120,7 @@ function rewriteHtmlUrls(html: string, baseUrl: string): string {
     return match;
   }).replace(/fetch\(["'](.*?)["']\)/gi, (match, url) => {
     if (url.startsWith("/") || url.startsWith(baseDomain)) {
-      return `fetch("/api/forward?url=${encodeURIComponent(new URL(url, baseDomain).href)}")`;
+      return `fetch("/api/forward/${encodeURIComponent(new URL(url, baseDomain).href)}")`;
     }
     return match;
   });
