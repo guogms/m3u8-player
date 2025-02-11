@@ -22,7 +22,7 @@ export async function OPTIONS() {
 }
 
 async function handleRequest(request: NextRequest, path: string[]) {
-  let targetUrl;
+  let targetUrl,tempDomain;
 
   
   try {
@@ -76,7 +76,6 @@ async function handleRequest(request: NextRequest, path: string[]) {
       };
 
       const response = await fetch(targetUrl, options);
-      const contentType = response.headers.get("Content-Type") || "";
 
       // 复制响应头
       const newHeaders = new Headers(response.headers);
@@ -84,7 +83,7 @@ async function handleRequest(request: NextRequest, path: string[]) {
       newHeaders.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
       newHeaders.set("Access-Control-Allow-Headers", "*");
       const html = await response.text();
-      const proxiedHtml = rewriteHtmlUrls(html, targetUrl);
+      const proxiedHtml = rewriteHtmlUrls(tempDomain, html, targetUrl);
       return new NextResponse(proxiedHtml, {
         status: response.status,
         headers: newHeaders,
@@ -111,17 +110,33 @@ async function handleRequest(request: NextRequest, path: string[]) {
 }
 
 // 处理 HTML，替换网页中的 URL 为代理地址
-function rewriteHtmlUrls(html: string, baseUrl: string): string {
+function rewriteHtmlUrls(tempDomain: string, html: string, baseUrl: string): string | undefined {
   const baseDomain = new URL(baseUrl).origin;
-  return html.replace(/(href|src|action)=["'](.*?)["']/gi, (match, attr, url) => {
-    if (url.startsWith("/") || url.startsWith(baseDomain)) {
-      return `${attr}="/api/forward/${encodeURIComponent(new URL(url, baseDomain).href)}"`;
-    }
-    return match;
-  }).replace(/fetch\(["'](.*?)["']\)/gi, (match, url) => {
-    if (url.startsWith("/") || url.startsWith(baseDomain)) {
-      return `fetch("/api/forward/${encodeURIComponent(new URL(url, baseDomain).href)}")`;
-    }
-    return match;
-  });
+  if (baseDomain !==''){
+    return html.replace(/(href|src|action)=["'](.*?)["']/gi, (match, attr, url) => {
+      if (url.startsWith("/") || url.startsWith(baseDomain)) {
+        return `${attr}="/api/forward/${encodeURIComponent(new URL(url, baseDomain).href)}"`;
+      }
+      return match;
+    }).replace(/fetch\(["'](.*?)["']\)/gi, (match, url) => {
+      if (url.startsWith("/") || url.startsWith(baseDomain)) {
+        return `fetch("/api/forward/${encodeURIComponent(new URL(url, baseDomain).href)}")`;
+      }
+      return match;
+    });
+  }
+  else{
+
+    return html.replace(/(href|src|action)=["'](.*?)["']/gi, (match, attr, url) => {
+      if (url.startsWith("/") || url.startsWith(baseDomain)) {
+        return `${attr}="/api/forward/${encodeURIComponent(new URL(url, baseDomain).href)}"`;
+      }
+      return match;
+    }).replace(/fetch\(["'](.*?)["']\)/gi, (match, url) => {
+      if (url.startsWith("/") || url.startsWith(baseDomain)) {
+        return `fetch("/api/forward/${encodeURIComponent(new URL(url, baseDomain).href)}")`;
+      }
+      return match;
+    });
+  }
 }
