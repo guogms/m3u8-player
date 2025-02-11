@@ -22,12 +22,12 @@ export async function OPTIONS() {
 }
 
 async function handleRequest(request: NextRequest, path: string[]) {
-  let targetUrl,tempDomain;
+  let targetUrl, tempDomain;
 
   
   try {
     let tempUrl = new URL(decodeURIComponent(request.url));
-    let tempDomain = tempUrl.origin;
+    tempDomain = tempUrl.origin;
     let spilt_str = tempDomain.split('//')[1] + "/api/forward/";
     const tempPath = tempUrl.href.split(spilt_str).pop();
 
@@ -128,13 +128,13 @@ function rewriteHtmlUrls(tempDomain: string, html: string, baseUrl: string): str
   else{
 
     return html.replace(/(href|src|action)=["'](.*?)["']/gi, (match, attr, url) => {
-      if (url.startsWith("/") || url.startsWith(baseDomain)) {
-        return `${attr}="/api/forward/${encodeURIComponent(new URL(url, baseDomain).href)}"`;
+      if (url.startsWith("/") || url.startsWith(tempDomain)) {
+        return `${attr}="/api/forward/${encodeURIComponent(new URL(url, tempDomain).href)}"`;
       }
       return match;
     }).replace(/fetch\(["'](.*?)["']\)/gi, (match, url) => {
-      if (url.startsWith("/") || url.startsWith(baseDomain)) {
-        return `fetch("/api/forward/${encodeURIComponent(new URL(url, baseDomain).href)}")`;
+      if (url.startsWith("/") || url.startsWith(tempDomain)) {
+        return `fetch("/api/forward/${encodeURIComponent(new URL(url, tempDomain).href)}")`;
       }
       return match;
     });
