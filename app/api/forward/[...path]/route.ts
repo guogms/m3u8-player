@@ -1,17 +1,16 @@
 export const runtime = 'edge';
 
-import { type NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest, { params }: { params: { path: string[] } }) {
-  return handleRequest(request, params.path)
+  return handleRequest(request, params.path);
 }
 
 export async function POST(request: NextRequest, { params }: { params: { path: string[] } }) {
-  return handleRequest(request, params.path)
+  return handleRequest(request, params.path);
 }
 
-export async function OPTIONS(request: NextRequest) {
-  // Handle CORS preflight requests
+export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: {
@@ -19,114 +18,56 @@ export async function OPTIONS(request: NextRequest) {
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
       "Access-Control-Allow-Headers": "*",
     },
-  })
+  });
 }
 
 async function handleRequest(request: NextRequest, path: string[]) {
-
-  // // 解码url
-  // const decodedUrl = decodeURIComponent(request.url.split("?url=")[1]);
-
-  // // 构造请求url
   let targetUrl;
 
-  // // 如果请求由浏览器窗口中发起
-  // if(decodedUrl){
-  //   console.log('decodedUrl',decodedUrl);
-
-
-
-    let tempDomain, spilt_str;
+  try {
     let tempUrl = new URL(request.url);
-    
-    // 获取初始的域名
-    tempDomain = tempUrl.origin;
-    spilt_str = tempDomain.split('//')[1] + "/api/forward/";
-    
+    let tempDomain = tempUrl.origin;
+    let spilt_str = tempDomain.split('//')[1] + "/api/forward/";
     const tempPath = tempUrl.href.split(spilt_str).pop();
 
-    if(tempPath){
+    if (tempPath) {
       tempUrl = new URL(tempPath);
     }
-    
-    // 获取协议头
-    const protocol = tempUrl.protocol
-  
-    // 获取domain参数
-    const domain = tempUrl.hostname
-  
-    // 路径名
-    const pathname = tempUrl.pathname
-  
-    // 后缀
-    const search = tempUrl.search
-  
-    targetUrl = `${protocol}//${domain}${pathname}${search}`
-    
-  // }
-  // // 否则认为浏览器主动发起
-  // else
-  // {
-  //   console.log('not decodedUrl');
-    
-  //   const url = new URL(request.url.split("/api/forward/")[1]);
-  
-  //   // 获取协议头
-  //   const protocol = url.protocol
-  
-  //   // 获取domain参数
-  //   const domain = url.hostname
-  
-  //   // 路径名
-  //   const pathname = url.pathname
-  
-  //   // 后缀
-  //   const search = url.search
 
-  //   targetUrl = `${protocol}//${domain}/${path.join("/")}${search}`;
-  // }
+    targetUrl = `${tempUrl.protocol}//${tempUrl.hostname}${tempUrl.pathname}${tempUrl.search}`;
+  } catch (error) {
+    return new NextResponse("Invalid URL", { status: 400 });
+  }
 
-  console.log('打印日志',targetUrl);
-  
-  // Prepare fetch options
+  console.log('请求转发到:', targetUrl);
+
+  // 复制请求头（避免某些 Header 影响转发）
+  const headers = new Headers(request.headers);
+  headers.delete("host");
+
   const options: RequestInit = {
     method: request.method,
-    headers: request.headers,
+    headers,
+    body: request.method !== "GET" ? request.body : null, // 直接传递 body 以支持流式数据
+  };
+
+  // 发送请求
+  const response = await fetch(targetUrl, options);
+
+  // 复制响应头
+  const newHeaders = new Headers(response.headers);
+  newHeaders.set("Access-Control-Allow-Origin", "*");
+  newHeaders.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  newHeaders.set("Access-Control-Allow-Headers", "*");
+
+  // 确保文件下载时的 `Content-Disposition`
+  const contentDisposition = response.headers.get("Content-Disposition");
+  if (!contentDisposition && response.headers.get("Content-Type")?.includes("application/octet-stream")) {
+    newHeaders.set("Content-Disposition", "attachment");
   }
 
-  // Include body for non-GET requests
-  if (request.method !== "GET") {
-    options.body = await request.arrayBuffer()
-  }
-
-  // Forward the request to the target URL
-  const response = await fetch(targetUrl, options)
-
-  // Prepare new headers with CORS
-  const newHeaders = new Headers(response.headers)
-  newHeaders.set("Access-Control-Allow-Origin", "*")
-  newHeaders.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-  newHeaders.set("Access-Control-Allow-Headers", "*")
-
-  // For binary files, we need to return the response as-is
-  const contentType = response.headers.get("Content-Type")
-  if (
-    contentType &&
-    (contentType.includes("application/octet-stream") ||
-      contentType.includes("video/") ||
-      contentType.includes("audio/") ||
-      contentType.includes("image/"))
-  ) {
-    return new NextResponse(response.body, {
-      status: response.status,
-      headers: newHeaders,
-    })
-  }
-
-  // For text-based responses, we can return them as before
-  const responseBody = await response.text()
-  return new NextResponse(responseBody, {
+  return new NextResponse(response.body, {
     status: response.status,
     headers: newHeaders,
-  })
+  });
 }
