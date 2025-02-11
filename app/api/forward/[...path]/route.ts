@@ -114,7 +114,7 @@ async function handleRequest(request: NextRequest, path: string[]) {
 function rewriteHtmlUrls(tempUrl: URL, html: string): string | undefined {
     return html.replace(/(href|src|action)=["'](.*?)["']/gi, (match, attr, url) => {
       if (url.startsWith("/")) {
-        return `${attr}="/api/forward/${tempUrl.protocol}//${tempUrl.hostname}${url})}"`;
+        return `${attr}="/api/forward/${tempUrl.protocol}////gagag///${tempUrl.hostname}${url})}"`;
         
       }
       else if (url.startsWith(tempUrl.origin)){
@@ -124,7 +124,7 @@ function rewriteHtmlUrls(tempUrl: URL, html: string): string | undefined {
     }).replace(/fetch\(["'](.*?)["']\)/gi, (match, url) => {
 
       if (url.startsWith("/")) {
-        return `fetch("/api/forward/${tempUrl.protocol}//${tempUrl.hostname}${url})}"`;
+        return `fetch("/api/forward/${tempUrl.protocol}////gagag///${tempUrl.hostname}${url})}"`;
         
       }
       else if (url.startsWith(tempUrl.origin)){
