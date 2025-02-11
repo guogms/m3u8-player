@@ -1,6 +1,7 @@
 export const runtime = 'edge';
 
 import { type NextRequest, NextResponse } from "next/server";
+import { isNull } from "util";
 
 export async function GET(request: NextRequest, { params }: { params: { path: string[] } }) {
   return handleRequest(request, params.path);
@@ -22,12 +23,12 @@ export async function OPTIONS() {
 }
 
 async function handleRequest(request: NextRequest, path: string[]) {
-  let targetUrl, tempDomain;
-
+  let targetUrl;
+  let tempUrl;
   
   try {
-    let tempUrl = new URL(decodeURIComponent(request.url));
-    tempDomain = tempUrl.origin;
+    tempUrl = new URL(decodeURIComponent(request.url));
+    let tempDomain = tempUrl.origin;
     let spilt_str = tempDomain.split('//')[1] + "/api/forward/";
     const tempPath = tempUrl.href.split(spilt_str).pop();
 
@@ -83,7 +84,7 @@ async function handleRequest(request: NextRequest, path: string[]) {
       newHeaders.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
       newHeaders.set("Access-Control-Allow-Headers", "*");
       const html = await response.text();
-      const proxiedHtml = rewriteHtmlUrls(tempDomain, html, targetUrl);
+      const proxiedHtml = rewriteHtmlUrls(tempUrl, html);
       return new NextResponse(proxiedHtml, {
         status: response.status,
         headers: newHeaders,
@@ -110,33 +111,25 @@ async function handleRequest(request: NextRequest, path: string[]) {
 }
 
 // 处理 HTML，替换网页中的 URL 为代理地址
-function rewriteHtmlUrls(tempDomain: string, html: string, baseUrl: string): string | undefined {
-  const baseDomain = new URL(baseUrl).origin;
-  if (baseDomain !==''){
+function rewriteHtmlUrls(tempUrl: URL, html: string): string | undefined {
     return html.replace(/(href|src|action)=["'](.*?)["']/gi, (match, attr, url) => {
-      if (url.startsWith("/") || url.startsWith(baseDomain)) {
-        return `${attr}="/api/forward/${encodeURIComponent(new URL(url, baseDomain).href)}"`;
+      if (url.startsWith("/")) {
+        return `${attr}="/api/forward/${tempUrl.protocol}//${tempUrl.hostname}${url})}"`;
+        
+      }
+      else if (url.startsWith(tempUrl.origin)){
+        return `${attr}="/api/forward/${url}"`;
       }
       return match;
     }).replace(/fetch\(["'](.*?)["']\)/gi, (match, url) => {
-      if (url.startsWith("/") || url.startsWith(baseDomain)) {
-        return `fetch("/api/forward/${encodeURIComponent(new URL(url, baseDomain).href)}")`;
-      }
-      return match;
-    });
-  }
-  else{
 
-    return html.replace(/(href|src|action)=["'](.*?)["']/gi, (match, attr, url) => {
-      if (url.startsWith("/") || url.startsWith(tempDomain)) {
-        return `${attr}="/api/forward/${encodeURIComponent(new URL(url, tempDomain).href)}"`;
+      if (url.startsWith("/")) {
+        return `fetch("/api/forward/${tempUrl.protocol}//${tempUrl.hostname}${url})}"`;
+        
       }
-      return match;
-    }).replace(/fetch\(["'](.*?)["']\)/gi, (match, url) => {
-      if (url.startsWith("/") || url.startsWith(tempDomain)) {
-        return `fetch("/api/forward/${encodeURIComponent(new URL(url, tempDomain).href)}")`;
+      else if (url.startsWith(tempUrl.origin)){
+        return `fetch("/api/forward/${url}"`;
       }
       return match;
     });
-  }
 }
