@@ -110,26 +110,26 @@ async function handleRequest(request: NextRequest, path: string[]) {
 
 }
 
-// 处理 HTML，替换网页中的 URL 为代理地址
 function rewriteHtmlUrls(tempUrl: URL, html: string): string | undefined {
-    return html.replace(/(href|src|action)=["'](.*?)["']/gi, (match, attr, url) => {
+  return html.replace(/(href|src|action)=["'](.*?)["']/gi, (match, attr, url) => {
       if (url.startsWith("/")) {
-        return `${attr}="/api/forward/${tempUrl.protocol}////gagag///${tempUrl.hostname}${url})}"`;
-        
+          // 如果是相对路径，拼接代理地址
+          return `${attr}="/api/forward/shezhi/${tempUrl.protocol}//${tempUrl.hostname}${url}"`;
       }
-      else if (url.startsWith(tempUrl.origin)){
-        return `${attr}="/api/forward/////gagag///${url}"`;
+      else if (url.startsWith(tempUrl.origin)) {
+          // 如果是相同来源的 URL，拼接代理地址
+          return `${attr}="/api/forward/shezhi/${url}"`;
       }
       return match;
-    }).replace(/fetch\(["'](.*?)["']\)/gi, (match, url) => {
-
+  }).replace(/fetch\(["'](.*?)["']\)/gi, (match, url) => {
       if (url.startsWith("/")) {
-        return `fetch("/api/forward/${tempUrl.protocol}////gagag///${tempUrl.hostname}${url})}"`;
-        
+          // 如果是相对路径，拼接代理地址
+          return `fetch("/api/forward/shezhi/${tempUrl.protocol}//${tempUrl.hostname}${url}")`;
       }
-      else if (url.startsWith(tempUrl.origin)){
-        return `fetch("/api/forward////gagag////${url}"`;
+      else if (url.startsWith(tempUrl.origin)) {
+          // 如果是相同来源的 URL，拼接代理地址
+          return `fetch("/api/forward/shezhi/${url}")`;
       }
       return match;
-    });
+  });
 }
