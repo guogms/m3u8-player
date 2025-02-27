@@ -30,7 +30,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="w-full text-center p-4 bg-gray-200 text-sm">
-        <a
+{/*         <a
           target="_blank"
           href="http://www.freecdn.vip/?zzwz"
           rel="noopener noreferrer"
@@ -38,7 +38,7 @@ export default function Home() {
           alt="免费云加速（FreeCDN），为您免费提供网站加速和网站防御（DDOS、CC攻击）"
         >
           本站由免费云加速（FreeCDN）提供网站加速和攻击防御服务
-        </a>
+        </a> */}
       </footer>
     </div>
   )
