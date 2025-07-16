@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
 
       const mailOptions = {
         from: {
-          name: fromName || 'Unknown Sender',
+          name: `${fromName} (由 Forwarder 代发)`,
           address: 'gimes@foxmail.com'
         },
         sender: 'gimes@foxmail.com',
@@ -98,11 +98,14 @@ export async function POST(req: NextRequest) {
         subject: `=?UTF-8?B?${Buffer.from("Fwd: " + subject).toString('base64')}?=`,
         text: `原始发件人: ${formattedFrom}\n\n${text || '(无正文内容)'}`,
         html: finalHtml,
+        envelope: {
+          from: 'gimes@foxmail.com',
+          to
+        },
         headers: {
           'X-Original-From': parsed.from?.text || formattedFrom,
           'Reply-To': fromAddress,
-          'Sender': `Forwarder <gimes@foxmail.com>`,
-          'X-Sender': `${fromAddress} (由 gimes@foxmail.com 代发)`
+          'X-Forwarded-For': fromAddress
         }
       };
 
