@@ -76,9 +76,13 @@ export async function POST(req: NextRequest) {
       const formattedTo = toName ? `${toName} <${toAddress}>` : toAddress;
 
       // 获取抄送人信息
-      const ccName = parsed.cc?.value?.[0]?.name || '';
-      const ccAddress = parsed.cc?.value?.[0]?.address || 'unknown@unknown.com';
-      const formattedCC = ccName ? `${ccName} <${ccAddress}>` : ccAddress;
+      type MailboxObject = { name?: string; address?: string };
+      const ccRecipients = parsed.cc?.value as MailboxObject[] || [];
+      const formattedCC = ccRecipients.map((cc: MailboxObject) => {
+        const name = cc.name || '';
+        const address = cc.address || '';
+        return name ? `${name} <${address}>` : address;
+      }).join(', ');
       
       const subject = parsed.subject || '(no subject)';
       const text = parsed.text || '';
@@ -92,20 +96,56 @@ export async function POST(req: NextRequest) {
       const recipientInfoHtml = `
         <div style="background-color:#f4f4f4;padding:10px;margin-bottom:15px;border-radius:5px;font-size:12px;">
           <p><strong>原始发件人:</strong> ${formattedFrom}</p>
-          <p><strong>原始收件人:</strong> ${formattedTo}</p>
-          <p><strong>抄送:</strong> ${formattedCC}</p>
+          <p><strong>原始收件人:</strong> ${originalTo}</p>
+          ${originalCC ? `<p><strong>抄送:</strong> ${originalCC}</p>` : ''}
         </div>
       `;
 
       // 准备文本版本的收件人信息
       const recipientInfoText = 
         `原始发件人: ${formattedFrom}\n` +
-        `原始收件人: ${formattedTo}\n` +
-        `抄送: ${formattedCC}\n` +
+        `原始收件人: ${originalTo}\n` +
+        `${originalCC ? `抄送: ${originalCC}\n` : ''}` +
         '\n-------------------\n\n';
+        
+      // 构建简化的HTML内容
+      let finalHtmlContent = '';
+      if (html.trim()) {
+        finalHtmlContent = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+            <title>转发邮件: ${subject}</title>
+          </head>
+          <body>
+            ${recipientInfoHtml}
+            <div class="email-content">
+              ${html}
+            </div>
+          </body>
+          </html>
+        `;
+      } else {
+        finalHtmlContent = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+            <title>转发邮件: ${subject}</title>
+          </head>
+          <body>
+            ${recipientInfoHtml}
+            <pre>${text || '(无正文内容)'}</pre>
+          </body>
+          </html>
+        `;
+      }
 
       const transporter = nodemailer.createTransport({
-        // 这里用你固定的 SMTP 配置，或者根据情况配置
+        // 这里用你固定的 SMTP 配置
         name: 'localhost',
         host: "smtp.qq.com",
         port: 465,
@@ -114,31 +154,26 @@ export async function POST(req: NextRequest) {
         tls: { rejectUnauthorized: false },
       });
 
+      // 简化邮件选项，避免触发垃圾邮件过滤
       const mailOptions = {
-        // 设置From为原始发件人，这样会显示为原始发件人
-        from: fromName ? `${fromName} <${fromAddress}>` : fromAddress,
-        // 设置实际发送者，与From不一致时会触发"代发"显示
-        sender: 'don-t-reply@qq.com',
-        to: toName ? `${toName} <${toAddress}>` : toAddress,
-        subject: `=?UTF-8?B?${Buffer.from("转发邮件: " + subject).toString('base64')}?=`,
+        from: 'don-t-reply@qq.com', // 使用固定的发件人
+        to,  // 使用传入的收件人地址
+        subject: `转发邮件: ${subject}`,
         text: recipientInfoText + (text || '(无正文内容)'),
-        html: html.trim() 
-          ? html
-          : `<pre>${text || '(无正文内容)'}</pre>`,
-        // envelope 明确指定SMTP信封发送者
-        envelope: {
-          from: 'don-t-reply@qq.com',  // MAIL FROM
-          to                          // RCPT TO
-        },
+        html: finalHtmlContent,
+        // 添加明确的编码设置
+        encoding: 'utf-8',
         headers: {
           'X-Original-From': parsed.from?.text || formattedFrom,
           'X-Original-To': originalTo,
           'X-Original-CC': originalCC,
+          'Content-Type': 'text/html; charset=utf-8',
+          'X-Priority': '3',
           'Reply-To': fromAddress
         }
       };
-      console.log('--------',mailOptions);
       
+      console.log('准备发送邮件:', mailOptions.to);
 
       const info = await transporter.sendMail(mailOptions);
       return NextResponse.json({ success: true, info });
@@ -148,6 +183,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Invalid request body' }, { status: 400 });
     }
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error('Failed to forward email:', error);
+    return NextResponse.json({ success: false, error: 'Failed to forward email: ' + error.message }, { status: 500 });
   }
 }
