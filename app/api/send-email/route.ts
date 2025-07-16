@@ -65,7 +65,11 @@ export async function POST(req: NextRequest) {
       // 解析邮件
       const parsed = await simpleParser(rawBuffer);
 
-      const from = parsed.from?.text || 'unknown@unknown.com';
+      // 获取发件人信息
+      const fromName = parsed.from?.value?.[0]?.name || '';
+      const fromAddress = parsed.from?.value?.[0]?.address || 'unknown@unknown.com';
+      const formattedFrom = fromName ? `${fromName} <${fromAddress}>` : fromAddress;
+      
       const subject = parsed.subject || '(no subject)';
       const text = parsed.text || '';
       const html = parsed.html || '';
@@ -81,14 +85,14 @@ export async function POST(req: NextRequest) {
       });
 
       const finalHtml = html.trim()
-        ? `<p>原始发件人: ${from}</p><hr/>${html}`
-        : `<p>原始发件人: ${from}</p><hr/><pre>${text || '(无正文内容)'}</pre>`;
+        ? `<p>原始发件人: ${formattedFrom}</p><hr/>${html}`
+        : `<p>原始发件人: ${formattedFrom}</p><hr/><pre>${text || '(无正文内容)'}</pre>`;
 
       const mailOptions = {
         from: `Forwarder <gimes@foxmail.com>`,
         to,
         subject: `=?UTF-8?B?${Buffer.from("Fwd: " + subject).toString('base64')}?=`,
-        text: `原始发件人: ${from}\n\n${text || '(无正文内容)'}`,
+        text: `原始发件人: ${formattedFrom}\n\n${text || '(无正文内容)'}`,
         html: finalHtml,
       };
 
