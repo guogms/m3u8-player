@@ -74,6 +74,26 @@ export async function POST(req: NextRequest) {
       const text = parsed.text || '';
       const html = parsed.html || '';
 
+      // 添加收件人信息的提取
+      const originalTo = parsed.to?.text || '';
+      const originalCC = parsed.cc?.text || '';
+      
+      // 准备一个包含原始收件人信息的HTML片段
+      const recipientInfoHtml = `
+        <div style="background-color:#f4f4f4;padding:10px;margin-bottom:15px;border-radius:5px;font-size:12px;">
+          <p><strong>原始发件人:</strong> ${formattedFrom}</p>
+          ${originalTo ? `<p><strong>原始收件人:</strong> ${originalTo}</p>` : ''}
+          ${originalCC ? `<p><strong>抄送:</strong> ${originalCC}</p>` : ''}
+        </div>
+      `;
+
+      // 准备文本版本的收件人信息
+      const recipientInfoText = 
+        `原始发件人: ${formattedFrom}\n` +
+        (originalTo ? `原始收件人: ${originalTo}\n` : '') +
+        (originalCC ? `抄送: ${originalCC}\n` : '') +
+        '\n-------------------\n\n';
+
       const transporter = nodemailer.createTransport({
         // 这里用你固定的 SMTP 配置，或者根据情况配置
         name: 'localhost',
@@ -84,20 +104,17 @@ export async function POST(req: NextRequest) {
         tls: { rejectUnauthorized: false },
       });
 
-      const finalHtml = html.trim()
-        ? `<p>原始发件人: ${formattedFrom}</p><hr/>${html}`
-        : `<p>原始发件人: ${formattedFrom}</p><hr/><pre>${text || '(无正文内容)'}</pre>`;
-
-      // 修改为：
       const mailOptions = {
         // 设置From为原始发件人，这样会显示为原始发件人
         from: fromName ? `${fromName} <${fromAddress}>` : fromAddress,
         // 设置实际发送者，与From不一致时会触发"代发"显示
         sender: 'gimes@foxmail.com',
         to,
-        subject: `=?UTF-8?B?${Buffer.from("Fwd: " + subject).toString('base64')}?=`,
-        text: `${text || '(无正文内容)'}`,
-        html: html.trim() ? html : `<pre>${text || '(无正文内容)'}</pre>`,
+        subject: `=?UTF-8?B?${Buffer.from("转发邮件: " + subject).toString('base64')}?=`,
+        text: recipientInfoText + (text || '(无正文内容)'),
+        html: html.trim() 
+          ? recipientInfoHtml + html
+          : recipientInfoHtml + `<pre>${text || '(无正文内容)'}</pre>`,
         // envelope 明确指定SMTP信封发送者
         envelope: {
           from: 'gimes@foxmail.com',  // MAIL FROM
@@ -105,6 +122,8 @@ export async function POST(req: NextRequest) {
         },
         headers: {
           'X-Original-From': parsed.from?.text || formattedFrom,
+          'X-Original-To': originalTo,
+          'X-Original-CC': originalCC,
           'Reply-To': fromAddress
         }
       };
