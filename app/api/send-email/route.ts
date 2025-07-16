@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
         host: "smtp.qq.com",
         port: 465,
         secure: true,
-        auth: { user: "don-t-reply@foxmail.com", pass: "mpfpbghambisbiae" },
+        auth: { user: "don-t-reply@qq.com", pass: "mpfpbghambisbiae" },
         tls: { rejectUnauthorized: false },
       });
 
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
           ? html
           : `<pre>${text || '(无正文内容)'}</pre>`,
         envelope: {
-          from: 'don-t-reply@foxmail.com',  // MAIL FROM
+          from: 'don-t-reply@qq.com',  // MAIL FROM
           to                          // RCPT TO
         },
         headers: {
