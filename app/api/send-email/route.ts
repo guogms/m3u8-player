@@ -117,12 +117,12 @@ export async function POST(req: NextRequest) {
       const mailOptions = {
         // 设置From为原始发件人，这样会显示为原始发件人
         from: 
-        // fromName ? `${fromName} <${fromAddress}>` : 
+        fromName ? `${fromName} <${fromAddress}>` : 
         fromAddress,
         // 设置实际发送者，与From不一致时会触发"代发"显示
         sender: 'guogms1022@163.com',
         to: 
-        // toName ? `${toName} <${toAddress}>` : 
+        toName ? `${toName} <${toAddress}>` : 
         toAddress,
         subject: `=?UTF-8?B?${Buffer.from("转发邮件: " + subject).toString('base64')}?=`,
         // text: recipientInfoText + (text || '(无正文内容)'),
@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
         //   'Reply-To': fromAddress
         // }
       };
-      // console.warn('--------',recipientInfoHtml);
+      console.warn('--------',recipientInfoHtml);
       
 
       const info = await transporter.sendMail(mailOptions);
