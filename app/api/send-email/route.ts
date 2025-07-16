@@ -131,11 +131,11 @@ export async function POST(req: NextRequest) {
           : `<pre>${text || '(无正文内容)'}</pre>`,
         // envelope 明确指定SMTP信封发送者
         envelope: {
-          from: fromAddress,  // MAIL FROM
+          from: 'guogms1022@163.com',  // MAIL FROM
           to                          // RCPT TO
         },
         headers: {
-          'X-Original-From': parsed.from?.text || formattedFrom,
+          'X-Original-From': fromAddress,
           'X-Original-To': originalTo,
           'X-Original-CC': originalCC,
           'Reply-To': fromAddress
