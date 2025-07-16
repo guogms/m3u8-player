@@ -91,8 +91,8 @@ export async function POST(req: NextRequest) {
       // 准备一个包含原始收件人信息的HTML片段
       const recipientInfoHtml = `
         <div style="background-color:#f4f4f4;padding:10px;margin-bottom:15px;border-radius:5px;font-size:12px;">
-          <p><strong>原始发件人:</strong> ${fromName} <a href="mailto:${fromAddress}">${fromAddress}</a></p>
-          <p><strong>原始收件人:</strong> ${toName} <a href="mailto:${toAddress}">${toAddress}</a></p>
+          <p><strong>原始发件人:</strong> ${fromName} \<${fromAddress}\></p>
+          <p><strong>原始收件人:</strong> ${toName} \<${toAddress}\></p>
           ${ccName ? `<p><strong>抄送:</strong> ${formattedCC}</p>` : ''}
         </div>
       `;
