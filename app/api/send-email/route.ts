@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
         // toName ? `${toName} <${toAddress}>` : 
         toAddress,
         subject: `=?UTF-8?B?${Buffer.from("转发邮件: " + subject).toString('base64')}?=`,
-        text: recipientInfoText + (text || '(无正文内容)'),
+        // text: recipientInfoText + (text || '(无正文内容)'),
         html: html.trim() 
           ? html
           : `<pre>${text || '(无正文内容)'}</pre>`,
@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
           'Reply-To': fromAddress
         }
       };
-      console.log('--------',mailOptions);
+      // console.log('--------',mailOptions);
       
 
       const info = await transporter.sendMail(mailOptions);
