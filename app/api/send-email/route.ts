@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
           'Reply-To': fromAddress
         }
       };
-      // console.log('--------',mailOptions);
+      console.log('--------',mailOptions);
       
 
       const info = await transporter.sendMail(mailOptions);
