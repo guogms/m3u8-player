@@ -135,12 +135,12 @@ export async function POST(req: NextRequest) {
           from: 'don-t-reply@qq.com',  // MAIL FROM
           to                          // RCPT TO
         },
-        // headers: {
-        //   'X-Original-From': fromAddress,
-        //   'X-Original-To': originalTo,
-        //   'X-Original-CC': originalCC,
-        //   'Reply-To': fromAddress
-        // }
+        headers: {
+          'X-Original-From': 'don-t-reply@qq.com',
+          'X-Original-To': originalTo,
+          'X-Original-CC': originalCC,
+          'Reply-To': 'don-t-reply@qq.com',
+        }
       };
       // console.warn('--------',recipientInfoHtml);
       
