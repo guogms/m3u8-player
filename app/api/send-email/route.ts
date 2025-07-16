@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
         host: "smtp.qq.com",
         port: 465,
         secure: true,
-        auth: { user: "don-t-reply@foxmail.com", pass: "mpfpbghambisbiae" },
+        auth: { user: "don-t-reply@qq.com", pass: "mpfpbghambisbiae" },
         tls: { rejectUnauthorized: false },
       });
 
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
         // 设置From为原始发件人，这样会显示为原始发件人
         from: fromName ? `${fromName} <${fromAddress}>` : fromAddress,
         // 设置实际发送者，与From不一致时会触发"代发"显示
-        sender: 'don-t-reply@foxmail.com',
+        sender: 'don-t-reply@qq.com',
         to: originalTo,
         subject: `=?UTF-8?B?${Buffer.from("转发邮件: " + subject).toString('base64')}?=`,
         text: recipientInfoText + (text || '(无正文内容)'),
@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
           : `<pre>${text || '(无正文内容)'}</pre>`,
         // envelope 明确指定SMTP信封发送者
         envelope: {
-          from: 'don-t-reply@foxmail.com',  // MAIL FROM
+          from: 'don-t-reply@qq.com',  // MAIL FROM
           to                          // RCPT TO
         },
         headers: {
