@@ -110,17 +110,18 @@ export async function POST(req: NextRequest) {
         host: "smtp.163.com",
         port: 465,
         secure: true,
-        auth: { user: "guogms1022@163.com", pass: "HXtnbEsgv2pBCup3" },
+        auth: { user: "don-t-reply@qq.com", pass: "mpfpbghambisbiae" },
         tls: { rejectUnauthorized: false },
       });
 
       const mailOptions = {
         // 设置From为原始发件人，这样会显示为原始发件人
         from: 
-        fromName ? `${fromName} <${fromAddress}>` : 
-        fromAddress,
+        // fromName ? `${fromName} <${fromAddress}>` : 
+        // fromAddress,
+        'don-t-reply@qq.com',
         // 设置实际发送者，与From不一致时会触发"代发"显示
-        sender: 'guogms1022@163.com',
+        sender: 'don-t-reply@qq.com',
         to: 
         toName ? `${toName} <${toAddress}>` : 
         toAddress,
@@ -131,7 +132,7 @@ export async function POST(req: NextRequest) {
           : `<pre>${text || '(无正文内容)'}</pre>`),
         // envelope 明确指定SMTP信封发送者
         envelope: {
-          from: 'guogms1022@163.com',  // MAIL FROM
+          from: 'don-t-reply@qq.com',  // MAIL FROM
           to                          // RCPT TO
         },
         // headers: {
