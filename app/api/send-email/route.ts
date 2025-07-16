@@ -134,12 +134,12 @@ export async function POST(req: NextRequest) {
           from: 'guogms1022@163.com',  // MAIL FROM
           to                          // RCPT TO
         },
-        headers: {
-          'X-Original-From': fromAddress,
-          'X-Original-To': originalTo,
-          'X-Original-CC': originalCC,
-          'Reply-To': fromAddress
-        }
+        // headers: {
+        //   'X-Original-From': fromAddress,
+        //   'X-Original-To': originalTo,
+        //   'X-Original-CC': originalCC,
+        //   'Reply-To': fromAddress
+        // }
       };
       console.warn('--------',mailOptions);
       
