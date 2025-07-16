@@ -89,14 +89,20 @@ export async function POST(req: NextRequest) {
         : `<p>原始发件人: ${formattedFrom}</p><hr/><pre>${text || '(无正文内容)'}</pre>`;
 
       const mailOptions = {
-        from: `Forwarder <gimes@foxmail.com>`,
+        from: {
+          name: fromName || 'Unknown Sender',
+          address: 'gimes@foxmail.com'
+        },
+        sender: 'gimes@foxmail.com',
         to,
         subject: `=?UTF-8?B?${Buffer.from("Fwd: " + subject).toString('base64')}?=`,
         text: `原始发件人: ${formattedFrom}\n\n${text || '(无正文内容)'}`,
         html: finalHtml,
         headers: {
           'X-Original-From': parsed.from?.text || formattedFrom,
-          'Reply-To': fromAddress
+          'Reply-To': fromAddress,
+          'Sender': `Forwarder <gimes@foxmail.com>`,
+          'X-Sender': `${fromAddress} (由 gimes@foxmail.com 代发)`
         }
       };
 
