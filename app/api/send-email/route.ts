@@ -107,23 +107,25 @@ export async function POST(req: NextRequest) {
       const transporter = nodemailer.createTransport({
         // 这里用你固定的 SMTP 配置，或者根据情况配置
         name: 'localhost',
-        host: "smtp.163.com",
+        host: "smtp.qq.com",
         port: 465,
         secure: true,
-        auth: { user: "guogms1022@163.com", pass: "HXtnbEsgv2pBCup3" },
+        auth: { user: "don-t-reply@qq.com", pass: "wwdaauseecmcbiff" },
         tls: { rejectUnauthorized: false },
       });
 
       const mailOptions = {
         // 设置From为原始发件人，这样会显示为原始发件人
         from: 
-        fromName ? `${fromName} <${fromAddress}>` : 
-        fromAddress,
+        // fromName ? `${fromName} <${fromAddress}>` : 
+        // fromAddress,
+        'don-t-reply@qq.com',
         // 设置实际发送者，与From不一致时会触发"代发"显示
-        sender: 'guogms1022@163.com',
-        to: 
-        toName ? `${toName} <${toAddress}>` : 
-        toAddress,
+        sender: 'don-t-reply@qq.com',
+        to
+        // : toName ? `${toName} <${toAddress}>` : 
+        // toAddress
+        ,
         subject: `=?UTF-8?B?${Buffer.from("转发邮件: " + subject).toString('base64')}?=`,
         // text: recipientInfoText + (text || '(无正文内容)'),
         html: recipientInfoHtml + (html.trim() 
@@ -131,17 +133,17 @@ export async function POST(req: NextRequest) {
           : `<pre>${text || '(无正文内容)'}</pre>`),
         // envelope 明确指定SMTP信封发送者
         envelope: {
-          from: 'guogms1022@163.com',  // MAIL FROM
+          from: 'don-t-reply@qq.com',  // MAIL FROM
           to                          // RCPT TO
         },
-        // headers: {
-        //   'X-Original-From': fromAddress,
-        //   'X-Original-To': originalTo,
-        //   'X-Original-CC': originalCC,
-        //   'Reply-To': fromAddress
-        // }
+        headers: {
+          'X-Original-From': 'don-t-reply@qq.com',
+          'X-Original-To': to,
+          'X-Original-CC': originalCC,
+          'Reply-To': 'don-t-reply@qq.com',
+        }
       };
-      // console.warn('--------',recipientInfoHtml);
+      console.warn('--------',mailOptions);
       
 
       const info = await transporter.sendMail(mailOptions);
