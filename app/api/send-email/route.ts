@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
         <div style="background-color:#f4f4f4;padding:10px;margin-bottom:15px;border-radius:5px;font-size:12px;">
           <p><strong>原始发件人:</strong> ${formattedFrom}</p>
           <p><strong>原始收件人:</strong> ${formattedTo}</p>
-          <p><strong>抄送:</strong> ${formattedCC}</p>
+          ${ccName ? `<p><strong>抄送:</strong> ${formattedCC}</p>` : ''}
         </div>
       `;
 
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
       const recipientInfoText = 
         `原始发件人: ${formattedFrom}\n` +
         `原始收件人: ${formattedTo}\n` +
-        `抄送: ${formattedCC}\n` +
+        (ccName ? `抄送: ${formattedCC}\n` : '') +
         '\n-------------------\n\n';
 
       const transporter = nodemailer.createTransport({
@@ -126,9 +126,9 @@ export async function POST(req: NextRequest) {
         toAddress,
         subject: `=?UTF-8?B?${Buffer.from("转发邮件: " + subject).toString('base64')}?=`,
         // text: recipientInfoText + (text || '(无正文内容)'),
-        html: html.trim() 
+        html: recipientInfoHtml + (html.trim() 
           ? html
-          : `<pre>${text || '(无正文内容)'}</pre>`,
+          : `<pre>${text || '(无正文内容)'}</pre>`),
         // envelope 明确指定SMTP信封发送者
         envelope: {
           from: 'guogms1022@163.com',  // MAIL FROM
@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
         //   'Reply-To': fromAddress
         // }
       };
-      console.warn('--------',recipientInfoHtml);
+      // console.warn('--------',recipientInfoHtml);
       
 
       const info = await transporter.sendMail(mailOptions);
