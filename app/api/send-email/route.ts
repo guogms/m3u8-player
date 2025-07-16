@@ -78,14 +78,14 @@ export async function POST(req: NextRequest) {
       const originalTo = parsed.to?.text || '';
       const originalCC = parsed.cc?.text || '';
       
-      // 准备一个包含原始收件人信息的HTML片段
-      const recipientInfoHtml = `
-        <div style="background-color:#f4f4f4;padding:10px;margin-bottom:15px;border-radius:5px;font-size:12px;">
-          <p><strong>原始发件人:</strong> ${formattedFrom}</p>
-          ${originalTo ? `<p><strong>原始收件人:</strong> ${originalTo}</p>` : ''}
-          ${originalCC ? `<p><strong>抄送:</strong> ${originalCC}</p>` : ''}
-        </div>
-      `;
+      // // 准备一个包含原始收件人信息的HTML片段
+      // const recipientInfoHtml = `
+      //   <div style="background-color:#f4f4f4;padding:10px;margin-bottom:15px;border-radius:5px;font-size:12px;">
+      //     <p><strong>原始发件人:</strong> ${formattedFrom}</p>
+      //     ${originalTo ? `<p><strong>原始收件人:</strong> ${originalTo}</p>` : ''}
+      //     ${originalCC ? `<p><strong>抄送:</strong> ${originalCC}</p>` : ''}
+      //   </div>
+      // `;
 
       // 准备文本版本的收件人信息
       const recipientInfoText = 
