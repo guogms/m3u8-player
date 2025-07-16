@@ -122,9 +122,10 @@ export async function POST(req: NextRequest) {
         'don-t-reply@qq.com',
         // 设置实际发送者，与From不一致时会触发"代发"显示
         sender: 'don-t-reply@qq.com',
-        to: 
-        toName ? `${toName} <${toAddress}>` : 
-        toAddress,
+        to
+        // : toName ? `${toName} <${toAddress}>` : 
+        // toAddress
+        ,
         subject: `=?UTF-8?B?${Buffer.from("转发邮件: " + subject).toString('base64')}?=`,
         // text: recipientInfoText + (text || '(无正文内容)'),
         html: recipientInfoHtml + (html.trim() 
@@ -137,7 +138,7 @@ export async function POST(req: NextRequest) {
         },
         headers: {
           'X-Original-From': 'don-t-reply@qq.com',
-          'X-Original-To': originalTo,
+          'X-Original-To': to,
           'X-Original-CC': originalCC,
           'Reply-To': 'don-t-reply@qq.com',
         }
