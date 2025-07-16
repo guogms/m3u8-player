@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
           to                          // RCPT TO
         },
         headers: {
-          'from': fromAddress,
+          'from-': fromAddress,
           'to': toAddress,
           'X-Original-From': parsed.from?.text || formattedFrom,
           'X-Original-To': originalTo,
