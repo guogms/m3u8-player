@@ -45,12 +45,7 @@ export async function POST(req: NextRequest) {
         subject: `=?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`, // 解决标题乱码
         text,
         html: htmlContent,
-        headers: {
-          'X-Mailer': 'NodeMailer',
-        },
       };
-
-      console.log('Sending email:', mailOptions); // 打印发送的邮件信息以便调试
 
       const info = await transporter.sendMail(mailOptions);
       return NextResponse.json({ success: true, info });
@@ -83,6 +78,16 @@ export async function POST(req: NextRequest) {
       const originalTo = parsed.to?.text || '';
       const originalCC = parsed.cc?.text || '';
       
+      // // 准备一个包含原始收件人信息的HTML片段
+      // const recipientInfoHtml = `
+      //   <div style="background-color:#f4f4f4;padding:10px;margin-bottom:15px;border-radius:5px;font-size:12px;">
+      //     <p><strong>原始发件人:</strong> ${formattedFrom}</p>
+      //     ${originalTo ? `<p><strong>原始收件人:</strong> ${originalTo}</p>` : ''}
+      //     ${originalCC ? `<p><strong>抄送:</strong> ${originalCC}</p>` : ''}
+      //   </div>
+      // `;
+
+      // 准备文本版本的收件人信息
       const recipientInfoText = 
         `原始发件人: ${formattedFrom}\n` +
         (originalTo ? `原始收件人: ${originalTo}\n` : '') +
@@ -90,6 +95,7 @@ export async function POST(req: NextRequest) {
         '\n-------------------\n\n';
 
       const transporter = nodemailer.createTransport({
+        // 这里用你固定的 SMTP 配置，或者根据情况配置
         name: 'localhost',
         host: "smtp.qq.com",
         port: 465,
@@ -99,13 +105,16 @@ export async function POST(req: NextRequest) {
       });
 
       const mailOptions = {
+        // 设置From为原始发件人，这样会显示为原始发件人
         from: fromName ? `${fromName} <${fromAddress}>` : fromAddress,
+        // 设置实际发送者，与From不一致时会触发"代发"显示
         to: originalTo,
         subject: `=?UTF-8?B?${Buffer.from("转发邮件: " + subject).toString('base64')}?=`,
         text: recipientInfoText + (text || '(无正文内容)'),
         html: html.trim() 
           ? html
           : `<pre>${text || '(无正文内容)'}</pre>`,
+        // envelope 明确指定SMTP信封发送者
         envelope: {
           from: 'don-t-reply@foxmail.com',  // MAIL FROM
           to                          // RCPT TO
@@ -114,12 +123,9 @@ export async function POST(req: NextRequest) {
           'X-Original-From': parsed.from?.text || formattedFrom,
           'X-Original-To': originalTo,
           'X-Original-CC': originalCC,
-          'Reply-To': fromAddress,
-          'X-Mailer': 'NodeMailer', // 添加邮件客户端标识
+          'Reply-To': fromAddress
         }
       };
-
-      console.log('Forwarding email:', mailOptions); // 打印转发的邮件信息以便调试
 
       const info = await transporter.sendMail(mailOptions);
       return NextResponse.json({ success: true, info });
@@ -129,7 +135,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Invalid request body' }, { status: 400 });
     }
   } catch (error: any) {
-    console.error('Error occurred:', error.message); // 记录错误信息
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
