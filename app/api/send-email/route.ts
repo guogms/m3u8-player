@@ -113,8 +113,8 @@ export async function POST(req: NextRequest) {
         subject: `=?UTF-8?B?${Buffer.from("转发邮件: " + subject).toString('base64')}?=`,
         text: recipientInfoText + (text || '(无正文内容)'),
         html: html.trim() 
-          ? recipientInfoHtml + html
-          : recipientInfoHtml + `<pre>${text || '(无正文内容)'}</pre>`,
+          ? html
+          : `<pre>${text || '(无正文内容)'}</pre>`,
         // envelope 明确指定SMTP信封发送者
         envelope: {
           from: 'gimes@foxmail.com',  // MAIL FROM
