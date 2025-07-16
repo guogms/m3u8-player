@@ -78,20 +78,35 @@ export async function POST(req: NextRequest) {
       const originalTo = parsed.to?.text || '';
       const originalCC = parsed.cc?.text || '';
       
+      // 替换为正确提取收件人完整信息的代码
+      // 格式化收件人信息函数，确保包含完整的邮箱地址
+      const formatRecipients = (recipients: any) => {
+        if (!recipients || !recipients.value) return '';
+        return recipients.value.map((r: any) => {
+          const name = r.name || '';
+          const address = r.address || '';
+          return name ? `${name} <${address}>` : address;
+        }).join(', ');
+      };
+      
+      // 提取并格式化收件人和抄送信息
+      const originalToFormatted = formatRecipients(parsed.to);
+      const originalCCFormatted = formatRecipients(parsed.cc);
+      
       // 准备一个包含原始收件人信息的HTML片段
       const recipientInfoHtml = `
         <div style="background-color:#f4f4f4;padding:10px;margin-bottom:15px;border-radius:5px;font-size:12px;">
           <p><strong>原始发件人:</strong> ${formattedFrom}</p>
-          ${originalTo ? `<p><strong>原始收件人:</strong> ${originalTo}</p>` : ''}
-          ${originalCC ? `<p><strong>抄送:</strong> ${originalCC}</p>` : ''}
+          ${originalToFormatted ? `<p><strong>原始收件人:</strong> ${originalToFormatted}</p>` : ''}
+          ${originalCCFormatted ? `<p><strong>抄送:</strong> ${originalCCFormatted}</p>` : ''}
         </div>
       `;
 
       // 准备文本版本的收件人信息
       const recipientInfoText = 
         `原始发件人: ${formattedFrom}\n` +
-        (originalTo ? `原始收件人: ${originalTo}\n` : '') +
-        (originalCC ? `抄送: ${originalCC}\n` : '') +
+        (originalToFormatted ? `原始收件人: ${originalToFormatted}\n` : '') +
+        (originalCCFormatted ? `抄送: ${originalCCFormatted}\n` : '') +
         '\n-------------------\n\n';
 
       const transporter = nodemailer.createTransport({
@@ -104,13 +119,14 @@ export async function POST(req: NextRequest) {
         tls: { rejectUnauthorized: false },
       });
 
+      // 修改为使用格式化后的收件人信息：
       const mailOptions = {
         // 设置From为原始发件人，这样会显示为原始发件人
         from: fromName ? `${fromName} <${fromAddress}>` : fromAddress,
         // 设置实际发送者，与From不一致时会触发"代发"显示
         sender: 'gimes@foxmail.com',
         to,
-        subject: `=?UTF-8?B?${Buffer.from("转发邮件: " + subject).toString('base64')}?=`,
+        subject: `=?UTF-8?B?${Buffer.from("Fwd: " + subject).toString('base64')}?=`,
         text: recipientInfoText + (text || '(无正文内容)'),
         html: html.trim() 
           ? recipientInfoHtml + html
@@ -122,8 +138,8 @@ export async function POST(req: NextRequest) {
         },
         headers: {
           'X-Original-From': parsed.from?.text || formattedFrom,
-          'X-Original-To': originalTo,
-          'X-Original-CC': originalCC,
+          'X-Original-To': originalToFormatted,
+          'X-Original-CC': originalCCFormatted,
           'Reply-To': fromAddress
         }
       };
