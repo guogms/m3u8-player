@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       const transporter = nodemailer.createTransport({
         // 这里用你固定的 SMTP 配置，或者根据情况配置
         name: 'localhost',
-        host: "smtp.163.com",
+        host: "smtp.qq.com",
         port: 465,
         secure: true,
         auth: { user: "don-t-reply@qq.com", pass: "wwdaauseecmcbiff" },
@@ -121,13 +121,13 @@ export async function POST(req: NextRequest) {
         // fromAddress,
         'don-t-reply@qq.com',
         // 设置实际发送者，与From不一致时会触发"代发"显示
-        // sender: 'don-t-reply@qq.com',
+        sender: 'don-t-reply@qq.com',
         to
         // : toName ? `${toName} <${toAddress}>` : 
         // toAddress
         ,
         subject: `=?UTF-8?B?${Buffer.from("转发邮件: " + subject).toString('base64')}?=`,
-        text: recipientInfoText + (text || '(无正文内容)'),
+        // text: recipientInfoText + (text || '(无正文内容)'),
         html: recipientInfoHtml + (html.trim() 
           ? html
           : `<pre>${text || '(无正文内容)'}</pre>`),
