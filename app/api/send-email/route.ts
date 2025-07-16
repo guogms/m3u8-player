@@ -91,8 +91,8 @@ export async function POST(req: NextRequest) {
       // 准备一个包含原始收件人信息的HTML片段
       const recipientInfoHtml = `
         <div style="background-color:#f4f4f4;padding:10px;margin-bottom:15px;border-radius:5px;font-size:12px;">
-          <p><strong>原始发件人:</strong> <a>${formattedFrom}</a></p>
-          <p><strong>原始收件人:</strong> <a>${formattedTo}</a></p>
+          <p><strong>原始发件人:</strong> ${fromName} <a href="mailto:${fromAddress}">${fromAddress}</a></p>
+          <p><strong>原始收件人:</strong> ${toName} <a href="mailto:${toAddress}">${toAddress}</a></p>
           ${ccName ? `<p><strong>抄送:</strong> ${formattedCC}</p>` : ''}
         </div>
       `;
@@ -107,25 +107,23 @@ export async function POST(req: NextRequest) {
       const transporter = nodemailer.createTransport({
         // 这里用你固定的 SMTP 配置，或者根据情况配置
         name: 'localhost',
-        host: "smtp.qq.com",
+        host: "smtp.163.com",
         port: 465,
         secure: true,
-        auth: { user: "don-t-reply@qq.com", pass: "wwdaauseecmcbiff" },
+        auth: { user: "guogms1022@163.com", pass: "HXtnbEsgv2pBCup3" },
         tls: { rejectUnauthorized: false },
       });
 
       const mailOptions = {
         // 设置From为原始发件人，这样会显示为原始发件人
         from: 
-        // fromName ? `${fromName} <${fromAddress}>` : 
-        // fromAddress,
-        'don-t-reply@qq.com',
+        fromName ? `${fromName} <${fromAddress}>` : 
+        fromAddress,
         // 设置实际发送者，与From不一致时会触发"代发"显示
-        sender: 'don-t-reply@qq.com',
-        to
-        // : toName ? `${toName} <${toAddress}>` : 
-        // toAddress
-        ,
+        sender: 'guogms1022@163.com',
+        to: 
+        toName ? `${toName} <${toAddress}>` : 
+        toAddress,
         subject: `=?UTF-8?B?${Buffer.from("转发邮件: " + subject).toString('base64')}?=`,
         // text: recipientInfoText + (text || '(无正文内容)'),
         html: recipientInfoHtml + (html.trim() 
@@ -133,17 +131,17 @@ export async function POST(req: NextRequest) {
           : `<pre>${text || '(无正文内容)'}</pre>`),
         // envelope 明确指定SMTP信封发送者
         envelope: {
-          from: 'don-t-reply@qq.com',  // MAIL FROM
+          from: 'guogms1022@163.com',  // MAIL FROM
           to                          // RCPT TO
         },
-        headers: {
-          'X-Original-From': 'don-t-reply@qq.com',
-          'X-Original-To': to,
-          'X-Original-CC': originalCC,
-          'Reply-To': 'don-t-reply@qq.com',
-        }
+        // headers: {
+        //   'X-Original-From': fromAddress,
+        //   'X-Original-To': originalTo,
+        //   'X-Original-CC': originalCC,
+        //   'Reply-To': fromAddress
+        // }
       };
-      console.warn('--------',mailOptions);
+      // console.warn('--------',recipientInfoHtml);
       
 
       const info = await transporter.sendMail(mailOptions);
