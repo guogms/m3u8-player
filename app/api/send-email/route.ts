@@ -88,24 +88,24 @@ export async function POST(req: NextRequest) {
         ? `<p>原始发件人: ${formattedFrom}</p><hr/>${html}`
         : `<p>原始发件人: ${formattedFrom}</p><hr/><pre>${text || '(无正文内容)'}</pre>`;
 
+      // 修改为：
       const mailOptions = {
-        from: {
-          name: `${fromName} (由 Forwarder 代发)`,
-          address: 'gimes@foxmail.com'
-        },
+        // 设置From为原始发件人，这样会显示为原始发件人
+        from: fromName ? `${fromName} <${fromAddress}>` : fromAddress,
+        // 设置实际发送者，与From不一致时会触发"代发"显示
         sender: 'gimes@foxmail.com',
         to,
         subject: `=?UTF-8?B?${Buffer.from("Fwd: " + subject).toString('base64')}?=`,
-        text: `原始发件人: ${formattedFrom}\n\n${text || '(无正文内容)'}`,
-        html: finalHtml,
+        text: `${text || '(无正文内容)'}`,
+        html: html.trim() ? html : `<pre>${text || '(无正文内容)'}</pre>`,
+        // envelope 明确指定SMTP信封发送者
         envelope: {
-          from: 'gimes@foxmail.com',
-          to
+          from: 'gimes@foxmail.com',  // MAIL FROM
+          to                          // RCPT TO
         },
         headers: {
           'X-Original-From': parsed.from?.text || formattedFrom,
-          'Reply-To': fromAddress,
-          'X-Forwarded-For': fromAddress
+          'Reply-To': fromAddress
         }
       };
 
