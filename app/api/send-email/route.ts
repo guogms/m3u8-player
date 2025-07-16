@@ -69,14 +69,6 @@ export async function POST(req: NextRequest) {
       const fromName = parsed.from?.value?.[0]?.name || '';
       const fromAddress = parsed.from?.value?.[0]?.address || 'unknown@unknown.com';
       const formattedFrom = fromName ? `${fromName} <${fromAddress}>` : fromAddress;
-
-      // 获取收件人信息
-      const toName = parsed.to?.value?.[0]?.name || '';
-      const toAddress = parsed.to?.value?.[0]?.address || 'unknown@unknown.com';
-      const formattedTo = toName ? `${toName} <${toAddress}>` : toAddress;
-
-
-
       
       const subject = parsed.subject || '(no subject)';
       const text = parsed.text || '';
@@ -90,7 +82,7 @@ export async function POST(req: NextRequest) {
       const recipientInfoHtml = `
         <div style="background-color:#f4f4f4;padding:10px;margin-bottom:15px;border-radius:5px;font-size:12px;">
           <p><strong>原始发件人:</strong> ${formattedFrom}</p>
-          ${originalTo ? `<p><strong>原始收件人:</strong> ${formattedTo}</p>` : ''}
+          ${originalTo ? `<p><strong>原始收件人:</strong> ${originalTo}</p>` : ''}
           ${originalCC ? `<p><strong>抄送:</strong> ${originalCC}</p>` : ''}
         </div>
       `;
@@ -117,7 +109,7 @@ export async function POST(req: NextRequest) {
         from: fromName ? `${fromName} <${fromAddress}>` : fromAddress,
         // 设置实际发送者，与From不一致时会触发"代发"显示
         sender: 'gimes@foxmail.com',
-        to,
+        to: originalTo,
         subject: `=?UTF-8?B?${Buffer.from("转发邮件: " + subject).toString('base64')}?=`,
         text: recipientInfoText + (text || '(无正文内容)'),
         html: html.trim() 
