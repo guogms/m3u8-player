@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
         // fromAddress,
         'don-t-reply@qq.com',
         // 设置实际发送者，与From不一致时会触发"代发"显示
-        sender: 'don-t-reply@qq.com',
+        // sender: 'don-t-reply@qq.com',
         to
         // : toName ? `${toName} <${toAddress}>` : 
         // toAddress
