@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
         host: "smtp.qq.com",
         port: 465,
         secure: true,
-        auth: { user: "166679816@qq.com", pass: "rewexdzhthvwbjdj" },
+        auth: { user: "166679816@qq.com", pass: "mpfpbghambisbiae" },
         tls: { rejectUnauthorized: false },
       });
 
