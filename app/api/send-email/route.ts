@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
         host: "smtp.163.com",
         port: 465,
         secure: true,
-        auth: { user: "don-t-reply@qq.com", pass: "mpfpbghambisbiae" },
+        auth: { user: "don-t-reply@qq.com", pass: "wwdaauseecmcbiff" },
         tls: { rejectUnauthorized: false },
       });
 
