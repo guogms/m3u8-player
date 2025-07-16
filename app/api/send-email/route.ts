@@ -69,6 +69,14 @@ export async function POST(req: NextRequest) {
       const fromName = parsed.from?.value?.[0]?.name || '';
       const fromAddress = parsed.from?.value?.[0]?.address || 'unknown@unknown.com';
       const formattedFrom = fromName ? `${fromName} <${fromAddress}>` : fromAddress;
+
+      // 获取收件人信息
+      const toName = parsed.to?.value?.[0]?.name || '';
+      const toAddress = parsed.to?.value?.[0]?.address || 'unknown@unknown.com';
+      const formattedTo = toName ? `${toName} <${toAddress}>` : toAddress;
+
+
+
       
       const subject = parsed.subject || '(no subject)';
       const text = parsed.text || '';
@@ -82,7 +90,7 @@ export async function POST(req: NextRequest) {
       const recipientInfoHtml = `
         <div style="background-color:#f4f4f4;padding:10px;margin-bottom:15px;border-radius:5px;font-size:12px;">
           <p><strong>原始发件人:</strong> ${formattedFrom}</p>
-          ${originalTo ? `<p><strong>原始收件人:</strong> ${originalTo}</p>` : ''}
+          ${originalTo ? `<p><strong>原始收件人:</strong> ${formattedTo}</p>` : ''}
           ${originalCC ? `<p><strong>抄送:</strong> ${originalCC}</p>` : ''}
         </div>
       `;
