@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { simpleParser } from 'mailparser'; // 仅 Node.js 环境可用
 
+// 辅助函数：从可能包含名称的邮箱格式中提取纯邮箱地址
+function extractEmail(emailString: string): string {
+  // 匹配尖括号中的邮箱地址，如果没有尖括号则返回整个字符串
+  const match = emailString.match(/<([^>]+)>/);
+  return match ? match[1] : emailString.trim();
+}
+
 export async function POST(req: NextRequest) {
   try {
     const data = await req.json();
@@ -78,15 +85,6 @@ export async function POST(req: NextRequest) {
       const originalTo = parsed.to?.text || '';
       const originalCC = parsed.cc?.text || '';
       
-      // // 准备一个包含原始收件人信息的HTML片段
-      // const recipientInfoHtml = `
-      //   <div style="background-color:#f4f4f4;padding:10px;margin-bottom:15px;border-radius:5px;font-size:12px;">
-      //     <p><strong>原始发件人:</strong> ${formattedFrom}</p>
-      //     ${originalTo ? `<p><strong>原始收件人:</strong> ${originalTo}</p>` : ''}
-      //     ${originalCC ? `<p><strong>抄送:</strong> ${originalCC}</p>` : ''}
-      //   </div>
-      // `;
-
       // 准备文本版本的收件人信息
       const recipientInfoText = 
         `原始发件人: ${formattedFrom}\n` +
@@ -109,7 +107,7 @@ export async function POST(req: NextRequest) {
         from: fromName ? `${fromName} <${fromAddress}>` : fromAddress,
         // 设置实际发送者，与From不一致时会触发"代发"显示
         sender: 'don-t-reply@qq.com',
-        to: originalTo,
+        to: extractEmail(to), // 确保只使用纯邮箱地址
         subject: `=?UTF-8?B?${Buffer.from("转发邮件: " + subject).toString('base64')}?=`,
         text: recipientInfoText + (text || '(无正文内容)'),
         html: html.trim() 
@@ -118,7 +116,7 @@ export async function POST(req: NextRequest) {
         // envelope 明确指定SMTP信封发送者
         envelope: {
           from: 'don-t-reply@qq.com',  // MAIL FROM
-          to                          // RCPT TO
+          to: extractEmail(to)         // RCPT TO，确保只使用纯邮箱地址
         },
         headers: {
           'X-Original-From': parsed.from?.text || formattedFrom,
