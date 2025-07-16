@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
         // 设置From为原始发件人，这样会显示为原始发件人
         from: 
         // fromName ? `${fromName} <${fromAddress}>` : 
-        fromAddress,
+        'guogms1022@163.com',
         // 设置实际发送者，与From不一致时会触发"代发"显示
         sender: 'guogms1022@163.com',
         to: 
