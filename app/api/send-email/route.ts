@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
       });
 
       const mailOptions = {
-        from: fromAddress,
+        from: fromName ? `${fromName} <${fromAddress}>` : fromAddress,
         to: originalTo,
         subject: `=?UTF-8?B?${Buffer.from("转发邮件: " + subject).toString('base64')}?=`,
         text: recipientInfoText + (text || '(无正文内容)'),
