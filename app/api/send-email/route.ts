@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
         // toAddress
         ,
         subject: `=?UTF-8?B?${Buffer.from("转发邮件: " + subject).toString('base64')}?=`,
-        // text: recipientInfoText + (text || '(无正文内容)'),
+        text: recipientInfoText + (text || '(无正文内容)'),
         html: recipientInfoHtml + (html.trim() 
           ? html
           : `<pre>${text || '(无正文内容)'}</pre>`),
