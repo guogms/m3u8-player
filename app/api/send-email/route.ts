@@ -69,6 +69,16 @@ export async function POST(req: NextRequest) {
       const fromName = parsed.from?.value?.[0]?.name || '';
       const fromAddress = parsed.from?.value?.[0]?.address || 'unknown@unknown.com';
       const formattedFrom = fromName ? `${fromName} <${fromAddress}>` : fromAddress;
+
+      // 获取收件人信息
+      const toName = parsed.to?.value?.[0]?.name || '';
+      const toAddress = parsed.to?.value?.[0]?.address || 'unknown@unknown.com';
+      const formattedTo = toName ? `${toName} <${toAddress}>` : toAddress;
+
+      // 获取抄送人信息
+      const ccName = parsed.cc?.value?.[0]?.name || '';
+      const ccAddress = parsed.cc?.value?.[0]?.address || 'unknown@unknown.com';
+      const formattedCC = ccName ? `${ccName} <${ccAddress}>` : ccAddress;
       
       const subject = parsed.subject || '(no subject)';
       const text = parsed.text || '';
@@ -82,16 +92,16 @@ export async function POST(req: NextRequest) {
       const recipientInfoHtml = `
         <div style="background-color:#f4f4f4;padding:10px;margin-bottom:15px;border-radius:5px;font-size:12px;">
           <p><strong>原始发件人:</strong> ${formattedFrom}</p>
-          ${originalTo ? `<p><strong>原始收件人:</strong> ${originalTo}</p>` : ''}
-          ${originalCC ? `<p><strong>抄送:</strong> ${originalCC}</p>` : ''}
+          <p><strong>原始收件人:</strong> ${formattedTo}</p>
+          <p><strong>抄送:</strong> ${formattedCC}</p>
         </div>
       `;
 
       // 准备文本版本的收件人信息
       const recipientInfoText = 
         `原始发件人: ${formattedFrom}\n` +
-        (originalTo ? `原始收件人: ${originalTo}\n` : '') +
-        (originalCC ? `抄送: ${originalCC}\n` : '') +
+        `原始收件人: ${formattedTo}\n` +
+        `抄送: ${formattedCC}\n` +
         '\n-------------------\n\n';
 
       const transporter = nodemailer.createTransport({
@@ -109,7 +119,7 @@ export async function POST(req: NextRequest) {
         from: fromName ? `${fromName} <${fromAddress}>` : fromAddress,
         // 设置实际发送者，与From不一致时会触发"代发"显示
         sender: 'don-t-reply@qq.com',
-        to: to,
+        to: toName ? `${toName} <${toAddress}>` : toAddress,
         subject: `=?UTF-8?B?${Buffer.from("转发邮件: " + subject).toString('base64')}?=`,
         text: recipientInfoText + (text || '(无正文内容)'),
         html: html.trim() 
