@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
         from: fromName ? `${fromName} <${fromAddress}>` : fromAddress,
         // 设置实际发送者，与From不一致时会触发"代发"显示
         sender: 'don-t-reply@qq.com',
-        to: originalTo,
+        to: to,
         subject: `=?UTF-8?B?${Buffer.from("转发邮件: " + subject).toString('base64')}?=`,
         text: recipientInfoText + (text || '(无正文内容)'),
         html: html.trim() 
