@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
           'Reply-To': 'don-t-reply@qq.com',
         }
       };
-      // console.warn('--------',recipientInfoHtml);
+      console.warn('--------',recipientInfoHtml);
       
 
       const info = await transporter.sendMail(mailOptions);
