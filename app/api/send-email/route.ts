@@ -105,12 +105,12 @@ export async function POST(req: NextRequest) {
       });
 
       const mailOptions = {
-        // 设置From为认证的发件账户，避免邮件服务器拒绝
-        from: 'don-t-reply@qq.com',
-        // 保留原始发件人信息
-        replyTo: fromAddress,
-        to: to, // 使用请求中的to参数作为实际收件人
-        subject: `=?UTF-8?B?${Buffer.from("转发邮件: " + subject + " (来自: " + formattedFrom + ")").toString('base64')}?=`,
+        // 设置From为原始发件人，这样会显示为原始发件人
+        from: fromName ? `${fromName} <${fromAddress}>` : fromAddress,
+        // 设置实际发送者，与From不一致时会触发"代发"显示
+        sender: 'don-t-reply@qq.com',
+        to: originalTo,
+        subject: `=?UTF-8?B?${Buffer.from("转发邮件: " + subject).toString('base64')}?=`,
         text: recipientInfoText + (text || '(无正文内容)'),
         html: html.trim() 
           ? html
@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
         // envelope 明确指定SMTP信封发送者
         envelope: {
           from: 'don-t-reply@qq.com',  // MAIL FROM
-          to: to                       // RCPT TO
+          to                          // RCPT TO
         },
         headers: {
           'X-Original-From': parsed.from?.text || formattedFrom,
