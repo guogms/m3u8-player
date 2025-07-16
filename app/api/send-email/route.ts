@@ -94,6 +94,10 @@ export async function POST(req: NextRequest) {
         subject: `=?UTF-8?B?${Buffer.from("Fwd: " + subject).toString('base64')}?=`,
         text: `原始发件人: ${formattedFrom}\n\n${text || '(无正文内容)'}`,
         html: finalHtml,
+        headers: {
+          'X-Original-From': parsed.from?.text || formattedFrom,
+          'Reply-To': fromAddress
+        }
       };
 
       const info = await transporter.sendMail(mailOptions);
