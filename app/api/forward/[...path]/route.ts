@@ -27,20 +27,35 @@ async function handleRequest(request: NextRequest, path: string[]) {
   let tempUrl;
   
   try {
-    tempUrl = new URL(decodeURIComponent(request.url));
-    let tempDomain = tempUrl.origin;
-    let spilt_str = tempDomain.split('//')[1] + "/api/forward/";
-    const tempPath = tempUrl.href.split(spilt_str).pop();
-
-    if (tempPath) {
-      tempUrl = new URL(tempPath);
+    // 从URL中提取目标URL
+    const fullUrl = decodeURIComponent(request.url);
+    const forwardIndex = fullUrl.indexOf('/api/forward/');
+    
+    if (forwardIndex === -1) {
+      return new NextResponse("Invalid forward URL", { status: 400 });
     }
-
-    targetUrl = decodeURIComponent(`${tempUrl.protocol}//${tempUrl.hostname}${tempUrl.pathname}${tempUrl.search}`);
-
-    // console.log('请求转发到:', targetUrl);
+    
+    // 提取目标URL (去掉 /api/forward/ 前缀)
+    const targetUrlRaw = fullUrl.substring(forwardIndex + '/api/forward/'.length);
+    
+    if (!targetUrlRaw) {
+      return new NextResponse("No target URL provided", { status: 400 });
+    }
+    
+    // 确保目标URL有协议
+    if (!targetUrlRaw.startsWith('http://') && !targetUrlRaw.startsWith('https://')) {
+      targetUrl = 'https://' + targetUrlRaw;
+    } else {
+      targetUrl = targetUrlRaw;
+    }
+    
+    // 验证目标URL
+    tempUrl = new URL(targetUrl);
+    
+    console.log('请求转发到:', targetUrl);
 
   } catch (error) {
+    console.error('URL解析错误:', error);
     return new NextResponse("Invalid URL", { status: 400 });
   }
 
