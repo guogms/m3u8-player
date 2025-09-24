@@ -32,8 +32,6 @@ async function handleRequest(request: NextRequest, path: string[]) {
     let spilt_str = tempDomain.split('//')[1] + "/api/forward/";
     const tempPath = tempUrl.href.split(spilt_str).pop();
 
-    
-
     if (tempPath) {
       tempUrl = new URL(tempPath);
     }
@@ -42,59 +40,50 @@ async function handleRequest(request: NextRequest, path: string[]) {
 
     // console.log('请求转发到:', targetUrl);
 
-
   } catch (error) {
     return new NextResponse("Invalid URL", { status: 400 });
   }
-
 
   // 复制请求头（避免某些 Header 影响转发）
   const headers = new Headers(request.headers);
   headers.delete("host");
 
+  // 获取请求体（如果有的话）
+  let requestBody = null;
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    try {
+      requestBody = await request.arrayBuffer();
+    } catch (error) {
+      // 如果获取请求体失败，继续处理
+      console.error("Failed to read request body:", error);
+    }
+  }
+
   const options: RequestInit = {
     method: request.method,
     headers,
-    body: request.method !== "GET" ? request.body : null, // 直接传递 body 以支持流式数据
+    body: requestBody,
   };
 
   // 发送请求
   const response = await fetch(targetUrl, options);
   const contentType = response.headers.get("Content-Type") || "";
 
-  
-  // 处理 HTML，替换网页中的资源地址为代理地址
-  if (contentType.includes("text/html")) {
-
-      // 删除 `host` 头，防止跨域问题
-      const headers = new Headers(request.headers);
-      headers.delete("host");
-
-      const options: RequestInit = {
-        method: request.method,
-        headers,
-        body: request.method !== "GET" ? await request.arrayBuffer() : null,
-      };
-
-      const response = await fetch(targetUrl, options);
-
-      // 复制响应头
-      const newHeaders = new Headers(response.headers);
-      newHeaders.set("Access-Control-Allow-Origin", "*");
-      newHeaders.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-      newHeaders.set("Access-Control-Allow-Headers", "*");
-      const html = await response.text();
-      const proxiedHtml = rewriteHtmlUrls(tempUrl, html);
-      return new NextResponse(proxiedHtml, {
-        status: response.status,
-        headers: newHeaders,
-      });
-  }
   // 复制响应头
   const newHeaders = new Headers(response.headers);
   newHeaders.set("Access-Control-Allow-Origin", "*");
   newHeaders.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   newHeaders.set("Access-Control-Allow-Headers", "*");
+
+  // 处理 HTML，替换网页中的资源地址为代理地址
+  if (contentType.includes("text/html")) {
+    const html = await response.text();
+    const proxiedHtml = rewriteHtmlUrls(tempUrl, html);
+    return new NextResponse(proxiedHtml, {
+      status: response.status,
+      headers: newHeaders,
+    });
+  }
 
   // 确保文件下载时的 `Content-Disposition`
   const contentDisposition = response.headers.get("Content-Disposition");
@@ -106,8 +95,6 @@ async function handleRequest(request: NextRequest, path: string[]) {
     status: response.status,
     headers: newHeaders,
   });
- 
-
 }
 
 function rewriteHtmlUrls(tempUrl: URL, html: string): string {
