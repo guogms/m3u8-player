@@ -1,24 +1,26 @@
-# 发送邮件的测试命令
+# 邮件转发 API 端点
 
+此 API 端点设计用于接收和转发来自 Cloudflare Email Worker 的邮件，不适合直接公开访问。
 
-Invoke-RestMethod -Uri "http://localhost:3000/api/send-email" `
-  -Method POST `
-  -Headers @{ "Content-Type" = "application/json; charset=utf-8" } `
-  -Body ([System.Text.Encoding]::UTF8.GetBytes(@'
+## 功能
+
+- **接收邮件数据**: 接收一个 `POST` 请求，其 JSON 载荷包含目标收件人的邮箱 (`to`) 和 Base64 编码的原始邮件内容 (`rawEmailBase64`)。
+- **解析原始邮件**: 解码 Base64 邮件内容，并使用 `mailparser` 提取原始发件人、主题和正文等关键信息。
+- **添加上下文页眉**: 在邮件正文前添加一个页眉，清晰地显示原始发件人和收件人信息。
+- **转发邮件**: 使用 `nodemailer` 和一个预先配置好的 SMTP 服务商（QQ 邮箱）将处理后的邮件发送给最终收件人。
+- **设置回复地址**: 将 `Reply-To` 头设置为原始发件人的邮箱地址，这样最终收件人就可以直接回复给原始发件人。
+
+## 预期载荷
+
+该端点需要一个具有以下结构的 JSON 对象：
+
+```json
 {
-  "smtp": {
-    "host": "smtp.qq.com",
-    "port": 465,
-    "secure": true,
-    "user": "925604237@qq.com",
-    "pass": "wiktmnfkmihbbceg"
-  },
-  "mail": {
-    "from": "demo <925604237@qq.com>",
-    "to": "guogms@qq.com",
-    "subject": "测试邮件",
-    "text": "这是一封测试邮件",
-    "html": "<b>这是一封测试邮件</b>"
-  }
+  "to": "final-recipient@example.com",
+  "rawEmailBase64": "<经过 Base64 编码的原始邮件字符串>"
 }
-'@))
+```
+
+## 安全提示
+
+SMTP 凭据目前硬编码在代码中。在生产环境中，强烈建议使用环境变量来安全地存储这些敏感信息。
