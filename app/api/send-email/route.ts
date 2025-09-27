@@ -6,52 +6,7 @@ export async function POST(req: NextRequest) {
   try {
     const data = await req.json();
 
-    if (data.smtp && data.mail) {
-      // 旧版本直接发邮件
-      const { smtp, mail } = data;
-      const { host, port, secure, user, pass } = smtp;
-      const { from, to, subject, text, html } = mail;
-
-      if (!host || !port || !user || !pass || !from || !to || !subject) {
-        return NextResponse.json({ success: false, error: 'Missing required smtp or mail fields' }, { status: 400 });
-      }
-
-      const transporter = nodemailer.createTransport({
-        name: 'localhost',
-        host,
-        port,
-        secure,
-        auth: { user, pass },
-        tls: { rejectUnauthorized: false },
-      });
-
-      const htmlContent = html
-        ? `<!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="UTF-8">
-            <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-            <title>${subject}</title>
-          </head>
-          <body>
-            ${html}
-          </body>
-          </html>`
-        : undefined;
-
-      const mailOptions = {
-        from,
-        to,
-        subject: `=?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`, // 解决标题乱码
-        text,
-        html: htmlContent,
-      };
-
-      const info = await transporter.sendMail(mailOptions);
-      return NextResponse.json({ success: true, info });
-    }
-
-    else if (data.to && data.rawEmailBase64) {
+    if (data.to && data.rawEmailBase64) {
       // 新版本，解析Base64原始邮件后转发
       const { to, rawEmailBase64 } = data;
 
@@ -148,10 +103,8 @@ export async function POST(req: NextRequest) {
 
       const info = await transporter.sendMail(mailOptions);
       return NextResponse.json({ success: true, info });
-    }
-
-    else {
-      return NextResponse.json({ success: false, error: 'Invalid request body' }, { status: 400 });
+    } else {
+      return NextResponse.json({ success: false, error: 'Missing to or rawEmailBase64 fields' }, { status: 400 });
     }
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
