@@ -21,8 +21,6 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   },
-  // 启用独立输出模式，用于 Docker 部署
-  output: process.env.BUILD_STANDALONE === 'true' ? 'standalone' : undefined,
 }
 
 mergeConfig(nextConfig, userConfig)
