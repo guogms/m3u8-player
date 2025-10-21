@@ -23,15 +23,6 @@ const nextConfig = {
   },
   // 启用独立输出模式，用于 Docker 部署
   output: process.env.BUILD_STANDALONE === 'true' ? 'standalone' : undefined,
-  
-  // Webpack 配置优化
-  webpack: (config, { isServer }) => {
-    // 禁用 webpack 缓存以减小构建产物大小
-    if (process.env.CF_PAGES === '1') {
-      config.cache = false;
-    }
-    return config;
-  },
 }
 
 mergeConfig(nextConfig, userConfig)
