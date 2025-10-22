@@ -6,6 +6,10 @@ import { Meting } from '@/lib/meting';
 import { musicCache } from '@/lib/music-cache';
 import crypto from 'crypto';
 
+// 强制动态渲染，因为这是一个 API 路由
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 const NETEASE_COOKIE = process.env.NETEASE_COOKIE || '';
 const TENCENT_COOKIE = process.env.TENCENT_COOKIE || '';
 const MUSIC_API_SALT = process.env.MUSIC_API_SALT || '';
