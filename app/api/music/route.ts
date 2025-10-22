@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Meting } from '@/lib/meting';
 import { musicCache } from '@/lib/music-cache';
+import { getCorsHeaders } from '@/lib/cors';
 import crypto from 'crypto';
 
 // 强制动态渲染，因为这是一个 API 路由
@@ -38,7 +39,21 @@ function generateAuth(server: string, type: string, id: string, salt: string): s
   return crypto.createHash('md5').update(salt + eid + salt).digest('hex');
 }
 
+// 处理 OPTIONS 请求（预检请求）
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+  
+  return new NextResponse(null, {
+    status: 200,
+    headers: corsHeaders,
+  });
+}
+
 export async function GET(request: NextRequest) {
+  const origin = request.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const server = searchParams.get('server') as ServerType;
@@ -47,11 +62,17 @@ export async function GET(request: NextRequest) {
     const auth = searchParams.get('auth') || '';
 
     if (!validateParams(server, type, id)) {
-      return NextResponse.json({ error: 'Invalid parameters' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Invalid parameters' }, 
+        { status: 403, headers: corsHeaders }
+      );
     }
 
     if (MUSIC_API_SALT && auth !== generateAuth(server, type, id, MUSIC_API_SALT)) {
-      return NextResponse.json({ error: 'Invalid auth' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Invalid auth' }, 
+        { status: 403, headers: corsHeaders }
+      );
     }
 
     const cacheKey = `${server}${type}${id}`;
@@ -97,7 +118,7 @@ export async function GET(request: NextRequest) {
           lrc: `${baseUrl}?server=${song.source}&type=lrc&id=${song.lyric_id}${MUSIC_API_SALT ? `&auth=${generateAuth(song.source, 'lrc', song.lyric_id, MUSIC_API_SALT)}` : ''}`,
         }));
 
-        return NextResponse.json(music);
+        return NextResponse.json(music, { headers: corsHeaders });
       }
 
       case 'song':
@@ -124,7 +145,7 @@ export async function GET(request: NextRequest) {
           lrc: `${baseUrl}?server=${song.source}&type=lrc&id=${song.lyric_id}${MUSIC_API_SALT ? `&auth=${generateAuth(song.source, 'lrc', song.lyric_id, MUSIC_API_SALT)}` : ''}`,
         }));
 
-        return NextResponse.json(music);
+        return NextResponse.json(music, { headers: corsHeaders });
       }
 
       case 'url': {
@@ -145,10 +166,17 @@ export async function GET(request: NextRequest) {
         }
 
         if (!url) {
-          return NextResponse.json({ error: 'URL not found' }, { status: 404 });
+          return NextResponse.json(
+            { error: 'URL not found' }, 
+            { status: 404, headers: corsHeaders }
+          );
         }
 
-        return NextResponse.redirect(url);
+        const response = NextResponse.redirect(url);
+        Object.entries(corsHeaders).forEach(([key, value]) => {
+          response.headers.set(key, value);
+        });
+        return response;
       }
 
       case 'lrc': {
@@ -163,7 +191,10 @@ export async function GET(request: NextRequest) {
         const lyricText = lyricData.lyric || lyricData.lrc || '';
         
         return new NextResponse(lyricText, {
-          headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+          headers: { 
+            'Content-Type': 'text/plain; charset=utf-8',
+            ...corsHeaders
+          },
         });
       }
 
@@ -176,14 +207,24 @@ export async function GET(request: NextRequest) {
         }
 
         const picData = JSON.parse(data);
-        return NextResponse.redirect(picData.url);
+        const response = NextResponse.redirect(picData.url);
+        Object.entries(corsHeaders).forEach(([key, value]) => {
+          response.headers.set(key, value);
+        });
+        return response;
       }
 
       default:
-        return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'Invalid type' }, 
+          { status: 400, headers: corsHeaders }
+        );
     }
   } catch (error) {
     console.error('Music API error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' }, 
+      { status: 500, headers: corsHeaders }
+    );
   }
 }
