@@ -91,9 +91,16 @@ export class Meting {
     }
 
     let url = api.url;
+    const headers = { ...this.header };
+    
+    // Add cookie if set
+    if (this.cookieValue) {
+      headers['Cookie'] = this.cookieValue;
+    }
+    
     const options: RequestInit = {
       method: api.method,
-      headers: this.header,
+      headers: headers,
     };
 
     if (api.method === 'GET' && api.body) {
@@ -102,7 +109,7 @@ export class Meting {
     } else if (api.method === 'POST' && api.body) {
       options.body = typeof api.body === 'string' ? api.body : JSON.stringify(api.body);
       if (typeof api.body !== 'string') {
-        this.header['Content-Type'] = 'application/json';
+        headers['Content-Type'] = 'application/json';
       }
     }
 
@@ -263,11 +270,23 @@ export class Meting {
   }
 
   private formatTencent(item: any): MusicInfo {
+    // 处理不同的数据结构
+    // 搜索结果: item.albummid
+    // 歌曲详情: item.album.mid
+    let picId = '';
+    if (item.albummid) {
+      picId = item.albummid;
+    } else if (item.album && item.album.mid) {
+      picId = item.album.mid;
+    } else if (item.album && item.album.pmid) {
+      picId = item.album.pmid;
+    }
+
     return {
       name: item.songname || item.name || '',
       artist: (item.singer || []).map((s: any) => s.name),
       url_id: item.songmid || item.mid || '',
-      pic_id: item.albummid || '',
+      pic_id: picId,
       lyric_id: item.songmid || item.mid || '',
       source: 'tencent',
     };
@@ -403,10 +422,12 @@ export class Meting {
           encode: 'netease_AESCBC',
           decode: 'netease_url',
         };
-        break;
+        return this.exec(api);
+        
       case 'tencent':
-        api = {
-          method: 'GET',
+        // Step 1: Get song info first
+        const songInfoApi = {
+          method: 'GET' as const,
           url: 'https://c.y.qq.com/v8/fcg-bin/fcg_play_single_song.fcg',
           body: {
             songmid: id,
@@ -414,12 +435,105 @@ export class Meting {
             format: 'json',
           },
         };
-        break;
+        
+        const songInfoResult = await this.exec(songInfoApi);
+        return this.tencentUrl(songInfoResult, br);
+        
       default:
         throw new Error('Server not supported');
     }
+  }
 
-    return this.exec(api);
+  private async tencentUrl(result: string, br: number): Promise<string> {
+    try {
+      const data = JSON.parse(result);
+      
+      if (!data.data || !data.data[0]) {
+        return JSON.stringify({ url: '', size: 0, br: -1 });
+      }
+      
+      const songData = data.data[0];
+      const guid = Math.floor(Math.random() * 10000000000);
+
+      // Quality types: [file_key, bitrate, prefix, extension]
+      const types = [
+        ['size_320mp3', 320, 'M800', 'mp3'],
+        ['size_192aac', 192, 'C600', 'm4a'],
+        ['size_128mp3', 128, 'M500', 'mp3'],
+        ['size_96aac', 96, 'C400', 'm4a'],
+        ['size_48aac', 48, 'C200', 'm4a'],
+        ['size_24aac', 24, 'C100', 'm4a'],
+      ];
+
+      // Build payload
+      const payload = {
+        req_0: {
+          module: 'vkey.GetVkeyServer',
+          method: 'CgiGetVkey',
+          param: {
+            guid: String(guid),
+            songmid: [] as string[],
+            filename: [] as string[],
+            songtype: [] as number[],
+            uin: '0',
+            loginflag: 1,
+            platform: '20',
+          },
+        },
+      };
+
+      // Add all quality options
+      for (const [sizeKey, , prefix, ext] of types) {
+        payload.req_0.param.songmid.push(songData.mid);
+        payload.req_0.param.filename.push(`${prefix}${songData.file.media_mid}.${ext}`);
+        payload.req_0.param.songtype.push(songData.type || 0);
+      }
+
+      // Step 2: Get vkey
+      const vkeyApi = {
+        method: 'GET' as const,
+        url: 'https://u.y.qq.com/cgi-bin/musicu.fcg',
+        body: {
+          format: 'json',
+          platform: 'yqq.json',
+          needNewCode: 0,
+          data: JSON.stringify(payload),
+        },
+      };
+
+      const vkeyResponse = await this.exec(vkeyApi);
+      const vkeyData = JSON.parse(vkeyResponse);
+      
+      if (!vkeyData.req_0 || !vkeyData.req_0.data) {
+        return JSON.stringify({ url: '', size: 0, br: -1 });
+      }
+
+      const vkeys = vkeyData.req_0.data.midurlinfo;
+      const sip = vkeyData.req_0.data.sip?.[0] || '';
+
+      // Find the best quality available
+      for (let i = 0; i < types.length; i++) {
+        const [sizeKey, bitrate, , ] = types[i];
+        const bitrateNum = typeof bitrate === 'string' ? parseInt(bitrate) : bitrate;
+        
+        if (songData.file[sizeKey] && bitrateNum <= br) {
+          if (vkeys[i] && vkeys[i].vkey) {
+            return JSON.stringify({
+              url: sip + vkeys[i].purl,
+              size: songData.file[sizeKey],
+              br: bitrateNum,
+            });
+          }
+        }
+      }
+
+      // No valid URL found
+      return JSON.stringify({ url: '', size: 0, br: -1 });
+      
+    } catch (error) {
+      console.error('Tencent URL error:', error);
+      return JSON.stringify({ url: '', size: 0, br: -1 });
+    }
   }
 
   async lyric(id: string): Promise<string> {
@@ -457,6 +571,11 @@ export class Meting {
   }
 
   async pic(id: string, size: number = 300): Promise<string> {
+    // 如果没有 id，返回空或默认图片
+    if (!id || id === '') {
+      return JSON.stringify({ url: '' });
+    }
+
     let url = '';
 
     switch (this.server) {

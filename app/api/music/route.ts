@@ -10,12 +10,22 @@ const NETEASE_COOKIE = process.env.NETEASE_COOKIE || '';
 const TENCENT_COOKIE = process.env.TENCENT_COOKIE || '';
 const MUSIC_API_SALT = process.env.MUSIC_API_SALT || '';
 
+// 调试日志：启动时输出 Cookie 状态
+console.log('[Music API Init] TENCENT_COOKIE length:', TENCENT_COOKIE.length);
+console.log('[Music API Init] NETEASE_COOKIE length:', NETEASE_COOKIE.length);
+
 type ServerType = 'netease' | 'tencent' | 'xiami' | 'kugou' | 'baidu';
 type RequestType = 'song' | 'album' | 'search' | 'artist' | 'playlist' | 'lrc' | 'url' | 'pic';
 
 function validateParams(server: string, type: string, id: string): boolean {
   const validServers = ['netease', 'tencent', 'baidu', 'xiami', 'kugou'];
   const validTypes = ['song', 'album', 'search', 'artist', 'playlist', 'lrc', 'url', 'pic'];
+  
+  // 对于 pic 类型，允许空 id（返回默认图片）
+  if (type === 'pic' && (!id || !id.trim())) {
+    return true;
+  }
+  
   return validServers.includes(server) && validTypes.includes(type) && !!id?.trim();
 }
 
@@ -44,10 +54,18 @@ export async function GET(request: NextRequest) {
     const api = new Meting(server);
     api.format(true);
 
+    // 调试日志
+    console.log(`[Music API] Request: ${server} ${type} ${id}`);
+    console.log(`[Music API] Has TENCENT_COOKIE: ${!!TENCENT_COOKIE}, Length: ${TENCENT_COOKIE.length}`);
+
     if (server === 'netease' && NETEASE_COOKIE) {
+      console.log('[Music API] Setting Netease cookie');
       api.cookie(NETEASE_COOKIE);
     } else if (server === 'tencent' && TENCENT_COOKIE) {
+      console.log('[Music API] Setting Tencent cookie, length:', TENCENT_COOKIE.length);
       api.cookie(TENCENT_COOKIE);
+    } else {
+      console.log('[Music API] No cookie set for', server);
     }
 
     switch (type) {
