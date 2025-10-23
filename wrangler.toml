@@ -1,4 +1,3 @@
-name = "m3u8-player"
 compatibility_flags = ["nodejs_compat"]
 
 # Cloudflare Pages configuration
