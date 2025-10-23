@@ -21,31 +21,25 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   },
-  // Cloudflare Pages optimization
+  // Cloudflare Pages optimization - simplified
   webpack: (config, { isServer }) => {
-    if (isServer) {
-      // Exclude large files from server bundle
-      config.externals = config.externals || []
-      config.externals.push({
-        'cache/webpack/server-production': 'commonjs cache/webpack/server-production'
-      })
-    }
-    
-    // Optimize bundle size
-    config.optimization = {
-      ...config.optimization,
-      splitChunks: {
-        ...config.optimization.splitChunks,
-        cacheGroups: {
-          ...config.optimization.splitChunks?.cacheGroups,
-          default: {
-            minChunks: 1,
-            priority: -20,
-            reuseExistingChunk: true,
-            maxSize: 200000, // 200KB limit per chunk
+    // Only apply optimizations for client-side builds
+    if (!isServer) {
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          ...config.optimization.splitChunks,
+          cacheGroups: {
+            ...config.optimization.splitChunks?.cacheGroups,
+            default: {
+              minChunks: 1,
+              priority: -20,
+              reuseExistingChunk: true,
+              maxSize: 200000, // 200KB limit per chunk
+            },
           },
         },
-      },
+      }
     }
     
     return config
