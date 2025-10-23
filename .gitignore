@@ -25,13 +25,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# Cloudflare Pages - exclude large cache files
-cache/
-.cache/
-*.pack
-*.cache
-
-# Webpack cache files
-.cache/
-cache/

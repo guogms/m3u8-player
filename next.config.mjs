@@ -21,35 +21,6 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   },
-  // Cloudflare Pages optimization
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      // Exclude large files from server bundle
-      config.externals = config.externals || []
-      config.externals.push({
-        'cache/webpack/server-production': 'commonjs cache/webpack/server-production'
-      })
-    }
-    
-    // Optimize bundle size
-    config.optimization = {
-      ...config.optimization,
-      splitChunks: {
-        ...config.optimization.splitChunks,
-        cacheGroups: {
-          ...config.optimization.splitChunks?.cacheGroups,
-          default: {
-            minChunks: 1,
-            priority: -20,
-            reuseExistingChunk: true,
-            maxSize: 200000, // 200KB limit per chunk
-          },
-        },
-      },
-    }
-    
-    return config
-  },
   // Docker 部署：生成 standalone 输出
   // 注意：Windows 上构建需要管理员权限或在 WSL/Docker 中构建
   // output: 'standalone',
