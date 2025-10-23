@@ -21,74 +21,29 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   },
-  // Cloudflare Pages optimization - comprehensive
-  webpack: (config, { isServer, dev }) => {
-    // Apply optimizations for both client and server builds
-    if (!dev) {
-      // Optimize for production builds
+  // Cloudflare Pages optimization - simplified
+  webpack: (config, { isServer }) => {
+    // Only apply optimizations for client-side builds
+    if (!isServer) {
       config.optimization = {
         ...config.optimization,
         splitChunks: {
           ...config.optimization.splitChunks,
-          chunks: 'all',
-          minSize: 20000,
-          maxSize: 200000, // 200KB limit per chunk
           cacheGroups: {
             ...config.optimization.splitChunks?.cacheGroups,
             default: {
               minChunks: 1,
               priority: -20,
               reuseExistingChunk: true,
-              maxSize: 200000,
-            },
-            vendor: {
-              test: /[\\/]node_modules[\\/]/,
-              name: 'vendors',
-              priority: -10,
-              chunks: 'all',
-              maxSize: 200000,
+              maxSize: 200000, // 200KB limit per chunk
             },
           },
         },
-        // Enable tree shaking and dead code elimination
-        usedExports: true,
-        sideEffects: false,
-      }
-
-      // Additional optimizations for server builds
-      if (isServer) {
-        // Reduce server bundle size by excluding unnecessary modules
-        config.externals = config.externals || []
-        config.externals.push({
-          'sharp': 'commonjs sharp',
-          'canvas': 'commonjs canvas',
-        })
-
-        // Optimize server-side chunks
-        config.optimization.splitChunks = {
-          ...config.optimization.splitChunks,
-          chunks: 'all',
-          minSize: 10000,
-          maxSize: 100000, // Smaller chunks for server
-          cacheGroups: {
-            ...config.optimization.splitChunks?.cacheGroups,
-            server: {
-              test: /[\\/]node_modules[\\/]/,
-              name: 'server-vendor',
-              priority: 10,
-              chunks: 'all',
-              maxSize: 100000,
-            },
-          },
-        }
       }
     }
     
     return config
   },
-  // Enable compression and other optimizations
-  compress: true,
-  poweredByHeader: false,
   // Docker 部署：生成 standalone 输出
   // 注意：Windows 上构建需要管理员权限或在 WSL/Docker 中构建
   // output: 'standalone',

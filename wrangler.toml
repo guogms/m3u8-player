@@ -3,12 +3,3 @@ compatibility_flags = ["nodejs_compat"]
 
 # Cloudflare Pages configuration
 pages_build_output_dir = ".next"
-
-# Build configuration for smaller bundles
-[build]
-command = "pnpm run build:optimized"
-
-# Environment variables for optimization
-[env.production]
-NODE_ENV = "production"
-NEXT_TELEMETRY_DISABLED = "1"
