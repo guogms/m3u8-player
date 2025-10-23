@@ -2,3 +2,7 @@ compatibility_flags = ["nodejs_compat"]
 
 # Cloudflare Pages configuration
 pages_build_output_dir = ".next"
+
+# Exclude large files from deployment
+[build]
+command = "pnpm run build"
