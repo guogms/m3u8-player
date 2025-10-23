@@ -1,0 +1,31 @@
+# Cloudflare Pages ignore file
+# Exclude files that cause deployment issues
+
+# Cache directories
+cache/
+.cache/
+.next/cache/
+
+# Large webpack files
+*.pack
+*.cache
+
+# Development files
+node_modules/
+.git/
+.gitignore
+README.md
+CLAUDE.md
+
+# Build artifacts that might be large
+.next/server/chunks/
+.next/server/pages/
+.next/server/app/
+
+# Log files
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
