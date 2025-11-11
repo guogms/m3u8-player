@@ -658,7 +658,9 @@ class Meting
         }
         $this->temp['br'] = $br;
 
-        return $this->exec($api);
+        $result = $this->exec($api);
+
+        return $result;
     }
 
     public function lyric($id)
@@ -1362,4 +1364,6 @@ class Meting
 
         return $result;
     }
+
+
 }

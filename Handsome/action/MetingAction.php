@@ -131,11 +131,23 @@ class Handsome_Meting_Action extends Typecho_Widget implements Widget_Interface_
         if ($type == 'url') {
             $data = $this->cache->cacheRead($EID);
             if (empty($data)) {
-                //todo bitrate
-//                $rate = Typecho_Widget::widget('Widget_Options')->plugin('Handsome')->bitrate;
                 $rate = 128;
                 $data = $api->url($id, $rate);
-                $this->cache->cacheWrite($EID, $data, 1200);
+                $temp_data = json_decode($data, true);
+
+                if (empty($temp_data['url']) && ($server == 'tencent' || $server == 'netease')) {
+                    $newCookie = $this->refreshCookie($server);
+                    if ($newCookie) {
+                        $this->saveCookie($server, $newCookie);
+                        $api->cookie($newCookie);
+                        $data = $api->url($id, $rate);
+                        $temp_data = json_decode($data, true);
+                    }
+                }
+
+                if (!empty($temp_data['url'])) {
+                    $this->cache->cacheWrite($EID, $data, 1200);
+                }
             }
             $data = json_decode($data, true);
             $url = $data['url'];
@@ -357,5 +369,62 @@ class Handsome_Meting_Action extends Typecho_Widget implements Widget_Interface_
 //            http_response_code(403);
 //            die('[]');
 //        }
+    }
+
+    private function refreshCookie($server)
+    {
+        $refreshUrl = 'http://local.zeusai.top:8898/credentials';
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $refreshUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Meting-PHP-Refresh-Agent/1.0');
+        $response = curl_exec($ch);
+        $error = curl_errno($ch);
+        curl_close($ch);
+
+        if ($error || empty($response)) {
+            return null;
+        }
+
+        $credentials = json_decode($response, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($credentials['code']) || $credentials['code'] != 200 || empty($credentials['data'])) {
+            return null;
+        }
+
+        if ($server == 'tencent') {
+            $firstCredential = $credentials['data'][0];
+            if (isset($firstCredential['encryptUin']) && isset($firstCredential['musickey'])) {
+                $uin = $firstCredential['encryptUin'];
+                $musickey = $firstCredential['musickey'];
+                return "uin={$uin}; qqmusic_key={$musickey}; qm_keyst={$musickey};";
+            }
+        }
+        // Can add logic for 'netease' here if its JSON structure is known
+
+        return null;
+    }
+
+    private function saveCookie($server, $cookie)
+    {
+        if ($server == 'tencent') {
+            $optionName = 'qq_cookie';
+        } else if ($server == 'netease') {
+            $optionName = 'cookie';
+        } else {
+            return;
+        }
+
+        $db = Typecho_Db::get();
+        $prefix = $db->getPrefix();
+        $select = $db->select('value')->from($prefix.'options')->where('name = ?', 'plugin:Handsome');
+        $row = $db->fetchRow($select);
+        if ($row) {
+            $settings = unserialize($row['value']);
+            $settings[$optionName] = $cookie;
+            $db->query($db->update('table.options')->rows(array('value' => serialize($settings)))->where('name = ?', 'plugin:Handsome'));
+        }
     }
 }
