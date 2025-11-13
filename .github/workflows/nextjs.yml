@@ -31,12 +31,14 @@ jobs:
           node-version: "20"
           cache: "pnpm"  # 缓存 pnpm 依赖
 
-      # 安装 pnpm
+      # 安装 pnpm 并检查版本
       - name: 安装 pnpm
-        run: npm install -g pnpm
+        run: |
+          npm install -g pnpm
+          pnpm --version
 
-      # 安装依赖
-      - name: 安装项目依赖
+      # 安装项目依赖
+      - name: 安装依赖
         run: pnpm install
 
       # 恢复 Next.js 构建缓存
