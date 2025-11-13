@@ -1,15 +1,17 @@
-name: Deploy Next.js site to Pages
+name: 部署 Next.js 到 GitHub Pages
 
 on:
   push:
     branches: ["main"]
   workflow_dispatch:
 
+# 设置 GITHUB_TOKEN 权限，用于 Pages 部署
 permissions:
   contents: read
   pages: write
   id-token: write
 
+# 并发控制：同一时间只允许一个部署
 concurrency:
   group: "pages"
   cancel-in-progress: false
@@ -19,26 +21,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # 拉取仓库代码
-      - name: Checkout
+      - name: 拉取仓库
         uses: actions/checkout@v4
 
       # 安装 Node.js
-      - name: Setup Node
+      - name: 安装 Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: 'pnpm'
+          cache: "pnpm"  # 缓存 pnpm 依赖
 
       # 安装 pnpm
-      - name: Setup pnpm
+      - name: 安装 pnpm
         run: npm install -g pnpm
 
       # 安装依赖
-      - name: Install dependencies
+      - name: 安装项目依赖
         run: pnpm install
 
       # 恢复 Next.js 构建缓存
-      - name: Restore .next cache
+      - name: 恢复 .next 缓存
         uses: actions/cache@v4
         with:
           path: .next/cache
@@ -46,18 +48,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nextjs-
 
-      # 构建 Next.js
-      - name: Build with Next.js
+      # 构建 Next.js 项目
+      - name: 构建 Next.js
         run: pnpm exec next build
 
       # 配置 Pages
-      - name: Setup Pages
+      - name: 配置 GitHub Pages
         uses: actions/configure-pages@v5
         with:
           static_site_generator: next
 
       # 上传构建产物
-      - name: Upload artifact
+      - name: 上传构建产物
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./out
@@ -69,6 +71,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Deploy to GitHub Pages
+      # 部署到 GitHub Pages
+      - name: 部署到 GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
