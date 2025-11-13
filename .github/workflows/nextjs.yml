@@ -29,13 +29,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "pnpm"  # 缓存 pnpm 依赖
 
-      # 安装 pnpm 并检查版本
+      # 安装 pnpm（官方 action）
       - name: 安装 pnpm
-        run: |
-          npm install -g pnpm
-          pnpm --version
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8  # 可指定需要的 pnpm 版本
 
       # 安装项目依赖
       - name: 安装依赖
@@ -54,7 +53,7 @@ jobs:
       - name: 构建 Next.js
         run: pnpm exec next build
 
-      # 配置 Pages
+      # 配置 GitHub Pages
       - name: 配置 GitHub Pages
         uses: actions/configure-pages@v5
         with:
