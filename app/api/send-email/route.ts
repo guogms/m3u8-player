@@ -1,112 +1,108 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
-import { simpleParser } from 'mailparser'; // 仅 Node.js 环境可用
+import { simpleParser } from 'mailparser';
 
-export async function POST(req: NextRequest) {
+const SMTP_HOST = process.env.SMTP_HOST || 'smtp.qq.com';
+const SMTP_PORT = Number(process.env.SMTP_PORT || 465);
+const SMTP_USER = process.env.SMTP_USER || 'don-t-reply@qq.com';
+const SMTP_PASS = process.env.SMTP_PASS || 'wwdaauseecmcbiff';
+
+export async function POST(request: NextRequest) {
   try {
-    const data = await req.json();
+    const payload = await request.json();
+    validatePayload(payload);
 
-    if (data.to && data.rawEmailBase64) {
-      // 新版本，解析Base64原始邮件后转发
-      const { to, rawEmailBase64 } = data;
+    const parsed = await parseRawEmail(payload.rawEmailBase64);
+    const transporter = createTransporter();
+    const message = buildMessage(payload.to, parsed);
 
-      if (!to || !rawEmailBase64) {
-        return NextResponse.json({ success: false, error: 'Missing to or rawEmailBase64 fields' }, { status: 400 });
-      }
-
-      // 解析 Base64 邮件内容为 Buffer
-      const rawBuffer = Buffer.from(rawEmailBase64, 'base64');
-
-      // 解析邮件
-      const parsed = await simpleParser(rawBuffer);
-
-      // 获取发件人信息
-      const fromName = parsed.from?.value?.[0]?.name || '';
-      const fromAddress = parsed.from?.value?.[0]?.address || 'unknown@unknown.com';
-      const formattedFrom = fromName ? `${fromName} <${fromAddress}>` : fromAddress;
-
-      // 获取收件人信息
-      const toName = parsed.to?.value?.[0]?.name || '';
-      const toAddress = parsed.to?.value?.[0]?.address || 'unknown@unknown.com';
-      const formattedTo = toName ? `${toName} <${toAddress}>` : toAddress;
-
-      // 获取抄送人信息
-      const ccName = parsed.cc?.value?.[0]?.name || '';
-      const ccAddress = parsed.cc?.value?.[0]?.address || 'unknown@unknown.com';
-      const formattedCC = ccName ? `${ccName} <${ccAddress}>` : ccAddress;
-      
-      const subject = parsed.subject || '(no subject)';
-      const text = parsed.text || '';
-      const html = parsed.html || '';
-
-      // 添加收件人信息的提取
-      const originalTo = parsed.to?.text || '';
-      const originalCC = parsed.cc?.text || '';
-      
-      // 准备一个包含原始收件人信息的HTML片段
-      const recipientInfoHtml = `
-        <div style="background-color:#f4f4f4;padding:10px;margin-bottom:15px;border-radius:5px;font-size:12px;">
-          <p><strong>原始发件人:</strong> ${fromName} &lt;${fromAddress}&gt;</p>
-          <p><strong>原始收件人:</strong> ${toName} &lt;${toAddress}&gt;</p>
-          ${ccName ? `<p><strong>抄送:</strong> ${formattedCC}</p>` : ''}
-        </div>
-      `;
-
-      // 准备文本版本的收件人信息
-      const recipientInfoText = 
-        `原始发件人: ${formattedFrom}\n` +
-        `原始收件人: ${formattedTo}\n` +
-        (ccName ? `抄送: ${formattedCC}\n` : '') +
-        '\n-------------------\n\n';
-
-      const transporter = nodemailer.createTransport({
-        // 这里用你固定的 SMTP 配置，或者根据情况配置
-        name: 'localhost',
-        host: "smtp.qq.com",
-        port: 465,
-        secure: true,
-        auth: { user: "don-t-reply@qq.com", pass: "wwdaauseecmcbiff" },
-        tls: { rejectUnauthorized: false },
-      });
-
-      const mailOptions = {
-        // 设置From为原始发件人，这样会显示为原始发件人
-        from: 
-        // fromName ? `${fromName} <${fromAddress}>` : 
-        // fromAddress,
-        'don-t-reply@qq.com',
-        // 设置实际发送者，与From不一致时会触发"代发"显示
-        sender: 'don-t-reply@qq.com',
-        to
-        // : toName ? `${toName} <${toAddress}>` : 
-        // toAddress
-        ,
-        subject: `=?UTF-8?B?${Buffer.from("转发邮件: " + subject).toString('base64')}?=`,
-        // text: recipientInfoText + (text || '(无正文内容)'),
-        html: recipientInfoHtml + (html.trim() 
-          ? html
-          : `<pre>${text || '(无正文内容)'}</pre>`),
-        // envelope 明确指定SMTP信封发送者
-        envelope: {
-          from: 'don-t-reply@qq.com',  // MAIL FROM
-          to                          // RCPT TO
-        },
-        headers: {
-          'X-Original-From': 'don-t-reply@qq.com',
-          'X-Original-To': to,
-          'X-Original-CC': originalCC,
-          'Reply-To': 'don-t-reply@qq.com',
-        }
-      };
-      console.warn('--------',mailOptions);
-      
-
-      const info = await transporter.sendMail(mailOptions);
-      return NextResponse.json({ success: true, info });
-    } else {
-      return NextResponse.json({ success: false, error: 'Missing to or rawEmailBase64 fields' }, { status: 400 });
-    }
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    const info = await transporter.sendMail(message);
+    return NextResponse.json({ success: true, info });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    const status = message.startsWith('Missing') ? 400 : 500;
+    return NextResponse.json({ success: false, error: message }, { status });
   }
+}
+
+function validatePayload(payload: any) {
+  if (!payload?.to || !payload?.rawEmailBase64) {
+    throw new Error('Missing "to" or "rawEmailBase64" field');
+  }
+}
+
+async function parseRawEmail(rawEmailBase64: string) {
+  const buffer = Buffer.from(rawEmailBase64, 'base64');
+  return simpleParser(buffer);
+}
+
+function createTransporter() {
+  return nodemailer.createTransport({
+    name: 'localhost',
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: true,
+    auth: { user: SMTP_USER, pass: SMTP_PASS },
+    tls: { rejectUnauthorized: false },
+  });
+}
+
+function buildMessage(to: string, parsed: Awaited<ReturnType<typeof parseRawEmail>>) {
+  const fromInfo = parsed.from?.value?.[0];
+  const toInfo = parsed.to?.value?.[0];
+  const ccInfo = parsed.cc?.value?.[0];
+
+  const renderedFrom = formatAddress(fromInfo?.name, fromInfo?.address || 'unknown@example.com');
+  const renderedTo = formatAddress(toInfo?.name, toInfo?.address || 'unknown@example.com');
+  const renderedCc = ccInfo ? formatAddress(ccInfo.name, ccInfo.address || '') : '';
+
+  const summaryHtml = `
+    <div style="background:#f3f4f6;padding:12px;border-radius:8px;font-size:13px;margin-bottom:16px;">
+      <p><strong>原始发件人：</strong>${renderedFrom}</p>
+      <p><strong>原始收件人：</strong>${renderedTo}</p>
+      ${renderedCc ? `<p><strong>抄送：</strong>${renderedCc}</p>` : ''}
+    </div>
+  `;
+
+  const summaryText = [
+    `原始发件人：${renderedFrom}`,
+    `原始收件人：${renderedTo}`,
+    renderedCc ? `抄送：${renderedCc}` : '',
+    '---------------------------',
+    '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const html = parsed.html?.toString().trim()
+    ? parsed.html.toString()
+    : `<pre>${parsed.text || '(无正文内容)'}</pre>`;
+
+  const subject = parsed.subject || '(no subject)';
+
+  return {
+    from: SMTP_USER,
+    sender: SMTP_USER,
+    to,
+    subject: `=?UTF-8?B?${Buffer.from(`转发邮件: ${subject}`).toString('base64')}?=`,
+    html: summaryHtml + html,
+    text: summaryText + (parsed.text || ''),
+    envelope: {
+      from: SMTP_USER,
+      to,
+    },
+    headers: {
+      'X-Original-From': renderedFrom,
+      'X-Original-To': renderedTo,
+      ...(renderedCc ? { 'X-Original-CC': renderedCc } : {}),
+      'Reply-To': SMTP_USER,
+    },
+  };
+}
+
+function formatAddress(name?: string, address?: string) {
+  if (!address) {
+    return 'unknown@example.com';
+  }
+  return name ? `${name} <${address}>` : address;
 }

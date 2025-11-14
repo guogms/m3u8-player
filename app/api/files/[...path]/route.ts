@@ -1,72 +1,79 @@
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+
+const REMOTE_ORIGIN = process.env.REMOTE_FILE_ORIGIN || 'https://video-202501.pages.dev';
+const HOP_BY_HOP_HEADERS = new Set(['connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'te', 'trailers', 'transfer-encoding', 'upgrade']);
+
 export const runtime = 'edge';
-import { type NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest, { params }: { params: { path: string[] } }) {
-    return handleRequest(request, params.path);
+  return proxyRequest(request, params.path);
 }
 
 export async function POST(request: NextRequest, { params }: { params: { path: string[] } }) {
-    return handleRequest(request, params.path);
+  return proxyRequest(request, params.path);
 }
 
 export async function OPTIONS(request: NextRequest) {
-    // Handle CORS preflight requests
-    return new NextResponse(null, {
-        status: 200,
-        headers: {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-            "Access-Control-Allow-Headers": "*",
-        },
-    });
+  const headers = buildCorsHeaders();
+  return new NextResponse(null, { status: 200, headers });
 }
 
-async function handleRequest(request: NextRequest, path: string[]) {
-    const url = new URL(request.url);
-    // Construct the target URL
-    const targetUrl = `https://video-202501.pages.dev/${path.join("/")}${url.search}`;
-    
-    // Prepare fetch options
-    const options: RequestInit = {
-        method: request.method,
-        headers: request.headers,
-    };
-    
-    // Include body for non-GET requests
-    if (request.method !== "GET") {
-        options.body = await request.arrayBuffer();
-    }
-    
-    // Forward the request to the target URL
-    const response = await fetch(targetUrl, options);
-    
-    // Prepare new headers with CORS
-    const newHeaders = new Headers(response.headers);
-    newHeaders.set("Access-Control-Allow-Origin", "*");
-    newHeaders.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    newHeaders.set("Access-Control-Allow-Headers", "*");
-    
-    // Check if the response has Content-Disposition header
-    const contentDisposition = response.headers.get('Content-Disposition');
-    if (!contentDisposition) {
-        // If not present, try to generate filename from URL
-        const filename = path.join('/').split('/').pop() || 'file';
-        newHeaders.set('Content-Disposition', `attachment; filename="${filename}"`);
-    }
-    
-    // For binary files, return the response as-is with correct headers
-    const contentType = response.headers.get("Content-Type");
-    if (contentType && (contentType.includes("application/octet-stream") || contentType.includes("video/") || contentType.includes("audio/") || contentType.includes("image/"))) {
-        return new NextResponse(response.body, {
-            status: response.status,
-            headers: newHeaders,
-        });
-    }
-    
-    // For text-based responses, return them as before
-    const responseBody = await response.text();
-    return new NextResponse(responseBody, {
-        status: response.status,
-        headers: newHeaders,
-    });
+async function proxyRequest(request: NextRequest, path: string[]) {
+  const targetUrl = buildTargetUrl(path, request.nextUrl.search);
+
+  const upstreamResponse = await fetch(targetUrl, {
+    method: request.method,
+    headers: cloneRequestHeaders(request.headers),
+    body: request.method === 'GET' ? undefined : await request.arrayBuffer(),
+  });
+
+  const headers = cloneResponseHeaders(upstreamResponse.headers);
+  ensureContentDisposition(headers, path);
+  applyCors(headers);
+
+  return new NextResponse(upstreamResponse.body, {
+    status: upstreamResponse.status,
+    headers,
+  });
+}
+
+function buildTargetUrl(pathSegments: string[], query: string) {
+  const joined = pathSegments.map((segment) => encodeURIComponent(segment)).join('/');
+  const normalized = `${REMOTE_ORIGIN.replace(/\/$/, '')}/${joined}`;
+  return `${normalized}${query}`;
+}
+
+function cloneRequestHeaders(headers: Headers) {
+  const clone = new Headers(headers);
+  clone.delete('host');
+  return clone;
+}
+
+function cloneResponseHeaders(headers: Headers) {
+  const result = new Headers();
+  headers.forEach((value, key) => {
+    if (HOP_BY_HOP_HEADERS.has(key.toLowerCase())) return;
+    result.set(key, value);
+  });
+  return result;
+}
+
+function ensureContentDisposition(headers: Headers, path: string[]) {
+  if (headers.has('content-disposition')) return;
+  const fallbackName = path[path.length - 1] || 'file';
+  headers.set('Content-Disposition', `attachment; filename="${fallbackName}"`);
+}
+
+function buildCorsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': '*',
+  };
+}
+
+function applyCors(headers: Headers) {
+  const cors = buildCorsHeaders();
+  Object.entries(cors).forEach(([key, value]) => headers.set(key, value));
 }

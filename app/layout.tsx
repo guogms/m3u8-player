@@ -1,23 +1,20 @@
-import "./globals.css"
-import { Inter } from "next/font/google"
-import type React from "react" // Import React
+import './globals.css';
 
-const inter = Inter({ subsets: ["latin"] })
+import { Inter } from 'next/font/google';
+import type React from 'react';
+
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: "M3U8 Player",
-  description: "A simple M3U8 player using HLS.js",
-}
+  title: 'M3U8 Music Hub',
+  description: 'Next.js 驱动的多平台音乐解析与 M3U8 播放工具集',
+};
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="zh-CN">
       <body className={inter.className}>{children}</body>
     </html>
-  )
+  );
 }
 

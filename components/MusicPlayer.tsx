@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import 'aplayer/dist/APlayer.min.css';
 
-// 音乐数据接口
+type MusicServer = 'netease' | 'tencent' | 'baidu';
+
 interface MusicItem {
   name: string;
   artist: string;
@@ -12,7 +13,6 @@ interface MusicItem {
   lrc: string;
 }
 
-// 播放器状态接口
 interface PlayerState {
   currentTime: number;
   currentIndex: number;
@@ -21,520 +21,279 @@ interface PlayerState {
   timestamp: number;
 }
 
-// 组件Props
 interface MusicPlayerProps {
-  defaultPlaylistId?: string;  // 默认歌单ID
-  defaultServer?: 'netease' | 'tencent' | 'baidu';  // 默认音乐平台
-  autoLoad?: boolean;  // 是否自动加载
-  position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';  // 位置
+  defaultPlaylistId?: string;
+  defaultServer?: MusicServer;
+  autoLoad?: boolean;
+  position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
 }
 
-const MUSIC_STORAGE_KEY = 'GlobalAPlayer_State';
-const MUSIC_LIST_STORAGE_KEY = 'GlobalAPlayer_MusicList';
+const LIST_CACHE_KEY = 'm3u8-player:playlist';
+const PLAYER_STATE_KEY = 'm3u8-player:state';
 
 export default function MusicPlayer({
   defaultPlaylistId = '2829883691',
   defaultServer = 'netease',
   autoLoad = true,
-  position = 'top-right'
 }: MusicPlayerProps) {
-  const [isShow, setIsShow] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentCover, setCurrentCover] = useState('');
-  const [isFirstClick, setIsFirstClick] = useState(true);
-  const [musicList, setMusicList] = useState<MusicItem[]>([]);
+  const [tracks, setTracks] = useState<MusicItem[]>([]);
+  const [nowPlaying, setNowPlaying] = useState<MusicItem | null>(null);
   const [loading, setLoading] = useState(false);
-  
+  const [error, setError] = useState<string | null>(null);
+  const [playlistId, setPlaylistId] = useState(defaultPlaylistId);
+  const [keyword, setKeyword] = useState('');
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<any>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
-  // 位置样式
-  const getPositionStyle = () => {
-    const styles: Record<string, React.CSSProperties> = {
-      'top-right': { top: '1rem', right: '1rem' },
-      'top-left': { top: '1rem', left: '1rem' },
-      'bottom-right': { bottom: '1rem', right: '1rem' },
-      'bottom-left': { bottom: '1rem', left: '1rem' },
-    };
-    return styles[position];
-  };
-
-  // 从API加载歌单
-  const loadPlaylist = async (playlistId: string, server: string = defaultServer) => {
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/music?server=${server}&type=playlist&id=${playlistId}`);
-      if (!response.ok) {
-        throw new Error('Failed to load playlist');
-      }
-      const data: MusicItem[] = await response.json();
-      
-      if (data && data.length > 0) {
-        setMusicList(data);
-        if (data[0].cover) {
-          setCurrentCover(data[0].cover);
-        }
-        // 保存到本地存储
-        localStorage.setItem(MUSIC_LIST_STORAGE_KEY, JSON.stringify(data));
-        return data;
-      }
-    } catch (error) {
-      console.error('Failed to load playlist:', error);
-      // 尝试从缓存加载
-      const cached = localStorage.getItem(MUSIC_LIST_STORAGE_KEY);
-      if (cached) {
-        const data = JSON.parse(cached);
-        setMusicList(data);
-        if (data[0]?.cover) {
-          setCurrentCover(data[0].cover);
-        }
-        return data;
-      }
-    } finally {
-      setLoading(false);
-    }
-    return [];
-  };
-
-  // 搜索歌曲
-  const searchMusic = async (keyword: string, server: string = defaultServer, limit: number = 30) => {
-    setLoading(true);
-    try {
-      const response = await fetch(
-        `/api/music?server=${server}&type=search&id=${encodeURIComponent(keyword)}&limit=${limit}`
-      );
-      if (!response.ok) {
-        throw new Error('Failed to search music');
-      }
-      const data: MusicItem[] = await response.json();
-      
-      if (data && data.length > 0) {
-        setMusicList(data);
-        if (data[0].cover) {
-          setCurrentCover(data[0].cover);
-        }
-        return data;
-      }
-    } catch (error) {
-      console.error('Failed to search music:', error);
-    } finally {
-      setLoading(false);
-    }
-    return [];
-  };
-
-  // 保存播放状态
-  const savePlayerState = () => {
-    if (playerRef.current) {
-      const state: PlayerState = {
-        currentTime: playerRef.current.audio.currentTime,
-        currentIndex: playerRef.current.list.index,
-        isPlaying: !playerRef.current.audio.paused,
-        volume: playerRef.current.audio.volume,
-        timestamp: Date.now(),
-      };
-      localStorage.setItem(MUSIC_STORAGE_KEY, JSON.stringify(state));
-    }
-  };
-
-  // 恢复播放状态
-  const restorePlayerState = () => {
+  const saveState = useCallback(() => {
     if (!playerRef.current) return;
+    const state: PlayerState = {
+      currentTime: playerRef.current.audio.currentTime,
+      currentIndex: playerRef.current.list.index,
+      isPlaying: !playerRef.current.audio.paused,
+      volume: playerRef.current.audio.volume,
+      timestamp: Date.now(),
+    };
+    localStorage.setItem(PLAYER_STATE_KEY, JSON.stringify(state));
+  }, []);
+
+  const restoreState = useCallback(() => {
+    if (!playerRef.current) return;
+    const saved = localStorage.getItem(PLAYER_STATE_KEY);
+    if (!saved) return;
 
     try {
-      const saved = localStorage.getItem(MUSIC_STORAGE_KEY);
-      if (saved) {
-        const state: PlayerState = JSON.parse(saved);
-        // 检查是否过期（24小时）
-        if (Date.now() - state.timestamp < 24 * 60 * 60 * 1000) {
-          if (state.currentIndex !== undefined) {
-            playerRef.current.list.switch(state.currentIndex);
-          }
-          if (state.volume !== undefined) {
-            playerRef.current.volume(state.volume);
-          }
-          if (state.currentTime !== undefined) {
-            playerRef.current.audio.currentTime = state.currentTime;
-          }
-          if (state.isPlaying) {
-            setTimeout(() => playerRef.current?.play(), 100);
-          }
-        }
+      const state: PlayerState = JSON.parse(saved);
+      if (Date.now() - state.timestamp > 24 * 60 * 60 * 1000) return;
+
+      if (typeof state.volume === 'number') {
+        playerRef.current.volume(state.volume);
       }
-    } catch (error) {
-      console.warn('Failed to restore player state:', error);
+      if (typeof state.currentIndex === 'number') {
+        playerRef.current.list.switch(state.currentIndex);
+      }
+      if (typeof state.currentTime === 'number') {
+        playerRef.current.audio.currentTime = state.currentTime;
+      }
+      if (state.isPlaying) {
+        setTimeout(() => playerRef.current?.play(), 150);
+      }
+    } catch (err) {
+      console.warn('Failed to restore music state', err);
     }
-  };
+  }, []);
 
-  // 初始化播放器
-  const initPlayer = async () => {
-    if (!containerRef.current || musicList.length === 0) return;
+  const hydratePlayer = useCallback(async () => {
+    if (!containerRef.current || !tracks.length) return;
+    const APlayer = (await import('aplayer')).default as any;
 
-    // 动态导入APlayer
-    const APlayer = (await import('aplayer')).default;
-
-    // 销毁旧播放器
     if (playerRef.current) {
       try {
         playerRef.current.destroy();
-      } catch (e) {
-        console.warn('Failed to destroy player:', e);
+      } catch (err) {
+        console.warn('Failed to destroy APlayer', err);
       }
       playerRef.current = null;
     }
 
-    // 清空容器
-    if (containerRef.current) {
-      containerRef.current.innerHTML = '';
-    }
+    containerRef.current.innerHTML = '';
+    playerRef.current = new APlayer({
+      container: containerRef.current,
+      audio: tracks,
+      lrcType: 3,
+      listFolded: false,
+      listMaxHeight: '320px',
+      autoplay: false,
+    });
 
+    setNowPlaying(tracks[0]);
+    restoreState();
+
+    const handlePlay = () => {
+      const audio = playerRef.current.list.audios[playerRef.current.list.index] || null;
+      setNowPlaying(audio);
+      saveState();
+    };
+    const handlePause = () => saveState();
+    playerRef.current.on('listswitch', handlePlay);
+    playerRef.current.audio.addEventListener('play', handlePlay);
+    playerRef.current.audio.addEventListener('pause', handlePause);
+  }, [tracks, restoreState, saveState]);
+
+  const persistTracks = useCallback((list: MusicItem[]) => {
     try {
-      // 创建新播放器
-      playerRef.current = new APlayer({
-        container: containerRef.current,
-        audio: musicList,
-        lrcType: 3,
-        listFolded: false,
-        listMaxHeight: '324px',
-        mini: false,
-        fixed: false,
-        volume: 0.8,
-        storageName: 'GlobalAPlayer',
-      });
-
-      // 绑定事件
-      playerRef.current.on('play', () => {
-        setIsPlaying(true);
-        const currentAudio = playerRef.current.list.audios[playerRef.current.list.index];
-        if (currentAudio?.cover) {
-          setCurrentCover(currentAudio.cover);
-        }
-        savePlayerState();
-      });
-
-      playerRef.current.on('pause', () => {
-        setIsPlaying(false);
-        savePlayerState();
-      });
-
-      playerRef.current.on('ended', () => {
-        setIsPlaying(false);
-        savePlayerState();
-      });
-
-      playerRef.current.on('timeupdate', () => {
-        // 每5秒保存一次状态
-        if (Math.floor(playerRef.current.audio.currentTime) % 5 === 0) {
-          savePlayerState();
-        }
-      });
-
-      playerRef.current.on('listswitch', () => {
-        savePlayerState();
-      });
-
-      // 恢复播放状态
-      setTimeout(() => restorePlayerState(), 200);
-    } catch (error) {
-      console.error('Failed to initialize player:', error);
+      localStorage.setItem(LIST_CACHE_KEY, JSON.stringify(list));
+    } catch (err) {
+      console.warn('Failed to cache playlist', err);
     }
-  };
+  }, []);
 
-  // 切换显示状态
-  const toggleShow = () => {
-    if (isFirstClick) {
-      setIsShow(true);
-      setIsFirstClick(false);
-      setTimeout(() => playerRef.current?.play(), 100);
-    } else {
-      setIsShow(!isShow);
-    }
-  };
+  const loadPlaylist = useCallback(
+    async (id: string) => {
+      if (!id.trim()) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(`/api/music?server=${defaultServer}&type=playlist&id=${encodeURIComponent(id)}`);
+        if (!response.ok) throw new Error('加载歌单失败');
+        const data: MusicItem[] = await response.json();
+        if (!data.length) throw new Error('歌单为空或无法解析');
+        setTracks(data);
+        setNowPlaying(data[0]);
+        persistTracks(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '未知错误');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [defaultServer, persistTracks]
+  );
 
-  // 组件挂载时初始化
+  const searchMusic = useCallback(
+    async (term: string) => {
+      if (!term.trim()) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(
+          `/api/music?server=${defaultServer}&type=search&id=${encodeURIComponent(term)}&limit=30`
+        );
+        if (!response.ok) throw new Error('搜索失败');
+        const data: MusicItem[] = await response.json();
+        if (!data.length) throw new Error('未找到匹配的歌曲');
+        setTracks(data);
+        setNowPlaying(data[0]);
+        persistTracks(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '未知错误');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [defaultServer, persistTracks]
+  );
+
   useEffect(() => {
+    const cached = localStorage.getItem(LIST_CACHE_KEY);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length) {
+          setTracks(parsed);
+          setNowPlaying(parsed[0]);
+          return;
+        }
+      } catch {
+        localStorage.removeItem(LIST_CACHE_KEY);
+      }
+    }
     if (autoLoad) {
-      // 尝试从缓存加载
-      const cached = localStorage.getItem(MUSIC_LIST_STORAGE_KEY);
-      if (cached) {
-        try {
-          const data = JSON.parse(cached);
-          setMusicList(data);
-          if (data[0]?.cover) {
-            setCurrentCover(data[0].cover);
-          }
-        } catch (e) {
-          console.warn('Failed to load cached music list:', e);
-        }
-      }
-      
-      // 从服务器加载默认歌单
-      if (defaultPlaylistId) {
-        loadPlaylist(defaultPlaylistId, defaultServer);
-      }
+      void loadPlaylist(defaultPlaylistId);
     }
-  }, [autoLoad, defaultPlaylistId, defaultServer]);
+  }, [autoLoad, defaultPlaylistId, loadPlaylist]);
 
-  // 当音乐列表变化时初始化播放器
   useEffect(() => {
-    if (musicList.length > 0) {
-      initPlayer();
-    }
+    if (!tracks.length) return;
+    void hydratePlayer();
+  }, [tracks, hydratePlayer]);
 
-    // 清理函数
+  useEffect(() => {
     return () => {
-      if (playerRef.current) {
-        try {
-          playerRef.current.destroy();
-        } catch (e) {
-          console.warn('Failed to destroy player:', e);
-        }
-        playerRef.current = null;
+      try {
+        playerRef.current?.destroy();
+      } catch {
+        // ignore
       }
     };
-  }, [musicList]);
+  }, []);
 
-  // 点击外部关闭
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (isShow && !target.closest('.music-player-container')) {
-        setIsShow(false);
-      }
-    };
+  const handlePlaylistSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    void loadPlaylist(playlistId);
+  };
 
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [isShow]);
+  const handleSearchSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    void searchMusic(keyword);
+  };
 
   return (
-    <div className="music-player-container" style={getPositionStyle()}>
-      {/* 封面按钮 */}
-      {currentCover && (
-        <div
-          className={`music-cover ${isPlaying ? 'playing' : ''}`}
-          onClick={toggleShow}
-          style={{ cursor: 'pointer' }}
-        >
-          <img src={currentCover} alt="音乐封面" />
-          {loading && (
-            <div className="loading-overlay">
-              <div className="spinner"></div>
-            </div>
-          )}
-        </div>
-      )}
+    <section className="rounded-3xl border border-white/10 bg-slate-900/60 p-6 shadow-2xl shadow-black/25 backdrop-blur">
+      <header className="space-y-2">
+        <p className="text-sm uppercase tracking-[0.5em] text-blue-300">Music API Preview</p>
+        <h2 className="text-2xl font-semibold text-white">多平台歌单解析播放器</h2>
+        <p className="text-sm text-slate-300">同一个 API 同时输出歌曲、封面、歌词链接，使用 APlayer 就能快速搭建可用播放器。</p>
+      </header>
 
-      {/* 播放器面板 */}
-      {isShow && (
-        <div className="music-panel">
-          <div className="close-btn" onClick={() => setIsShow(false)}>
-            ✕
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        <form onSubmit={handlePlaylistSubmit} className="space-y-2 rounded-2xl border border-white/10 bg-slate-900/40 p-4">
+          <label className="text-sm font-semibold text-slate-200" htmlFor="playlistId">
+            歌单 ID
+          </label>
+          <div className="flex gap-3">
+            <input
+              id="playlistId"
+              value={playlistId}
+              onChange={(event) => setPlaylistId(event.target.value)}
+              placeholder="例如：2829883691"
+              className="flex-1 rounded-xl border border-white/10 bg-black/30 px-4 py-2 text-white outline-none focus:border-blue-400"
+            />
+            <button
+              type="submit"
+              className="rounded-xl bg-blue-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:bg-slate-600"
+              disabled={loading}
+            >
+              {loading ? '加载中…' : '加载歌单'}
+            </button>
           </div>
-          <div ref={containerRef} id="music-player"></div>
+        </form>
+
+        <form onSubmit={handleSearchSubmit} className="space-y-2 rounded-2xl border border-white/10 bg-slate-900/40 p-4">
+          <label className="text-sm font-semibold text-slate-200" htmlFor="keyword">
+            搜索歌曲 / 歌手
+          </label>
+          <div className="flex gap-3">
+            <input
+              id="keyword"
+              value={keyword}
+              onChange={(event) => setKeyword(event.target.value)}
+              placeholder="输入关键字，如：周杰伦"
+              className="flex-1 rounded-xl border border-white/10 bg-black/30 px-4 py-2 text-white outline-none focus:border-blue-400"
+            />
+            <button
+              type="submit"
+              className="rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:bg-slate-600"
+              disabled={loading}
+            >
+              {loading ? '搜索中…' : '开始搜索'}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {error && (
+        <p className="mt-4 rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-200">{error}</p>
+      )}
+
+      {nowPlaying && (
+        <div className="mt-4 flex items-center gap-4 rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-sm text-slate-200">
+          <div className="h-14 w-14 overflow-hidden rounded-xl bg-black/40">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={nowPlaying.cover} alt={nowPlaying.name} className="h-full w-full object-cover" />
+          </div>
+          <div>
+            <p className="text-base font-semibold text-white">{nowPlaying.name}</p>
+            <p className="text-xs uppercase tracking-widest text-blue-200">{nowPlaying.artist}</p>
+          </div>
         </div>
       )}
 
-      <style jsx>{`
-        .music-player-container {
-          position: fixed;
-          z-index: 9999;
-        }
-
-        .music-cover {
-          width: 48px;
-          height: 48px;
-          border-radius: 50%;
-          overflow: hidden;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-          border: 2px solid #fff;
-          transition: all 0.3s ease;
-          position: relative;
-        }
-
-        .music-cover img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          transition: transform 0.3s ease;
-        }
-
-        .music-cover:hover {
-          transform: scale(1.05);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-
-        .music-cover.playing img {
-          animation: rotate 3s linear infinite;
-        }
-
-        @keyframes rotate {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
-
-        .loading-overlay {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .spinner {
-          width: 20px;
-          height: 20px;
-          border: 2px solid #fff;
-          border-top-color: transparent;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to {
-            transform: rotate(360deg);
-          }
-        }
-
-        .music-panel {
-          position: fixed;
-          ${position.includes('right') ? 'right: 1rem;' : 'left: 1rem;'}
-          ${position.includes('top') ? 'top: 5rem;' : 'bottom: 5rem;'}
-          width: 340px;
-          background: #fff;
-          border-radius: 12px;
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-          overflow: hidden;
-          animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateY(-20px) scale(0.9);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-
-        .close-btn {
-          position: absolute;
-          top: 8px;
-          right: 8px;
-          width: 28px;
-          height: 28px;
-          border-radius: 50%;
-          background: rgba(0, 0, 0, 0.3);
-          color: #fff;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          z-index: 10;
-          transition: background 0.2s;
-          font-size: 18px;
-          line-height: 1;
-        }
-
-        .close-btn:hover {
-          background: rgba(0, 0, 0, 0.5);
-        }
-
-        :global(.aplayer-list-title),
-        :global(.aplayer-title) {
-          color: #3c3c43 !important;
-        }
-      `}</style>
-    </div>
+      <div
+        ref={containerRef}
+        className="mt-6 min-h-[320px] rounded-2xl border border-white/5 bg-black/20 p-3 shadow-inner shadow-black/30"
+      />
+    </section>
   );
-}
-
-// 导出搜索和加载函数的Hook
-export function useMusicPlayer() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const searchMusic = async (
-    keyword: string,
-    server: 'netease' | 'tencent' | 'baidu' = 'netease',
-    limit: number = 30
-  ): Promise<MusicItem[]> => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(
-        `/api/music?server=${server}&type=search&id=${encodeURIComponent(keyword)}&limit=${limit}`
-      );
-      if (!response.ok) {
-        throw new Error('Search failed');
-      }
-      const data = await response.json();
-      return data;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadPlaylist = async (
-    playlistId: string,
-    server: 'netease' | 'tencent' | 'baidu' = 'netease'
-  ): Promise<MusicItem[]> => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`/api/music?server=${server}&type=playlist&id=${playlistId}`);
-      if (!response.ok) {
-        throw new Error('Load playlist failed');
-      }
-      const data = await response.json();
-      return data;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getSong = async (
-    songId: string,
-    server: 'netease' | 'tencent' | 'baidu' = 'netease'
-  ): Promise<MusicItem[]> => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`/api/music?server=${server}&type=song&id=${songId}`);
-      if (!response.ok) {
-        throw new Error('Get song failed');
-      }
-      const data = await response.json();
-      return data;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return {
-    loading,
-    error,
-    searchMusic,
-    loadPlaylist,
-    getSong,
-  };
 }
