@@ -47,32 +47,69 @@ function createTransporter() {
   });
 }
 
+function formatAddress(name?: string, address?: string) {
+  // 确保地址存在且有效
+  if (!address || address.trim() === '') {
+    return name || 'unknown@example.com';
+  }
+  
+  // 清理名字中的特殊字符
+  const cleanName = name?.trim();
+  
+  // 如果有名字且名字不为空，使用标准格式
+  if (cleanName && cleanName !== '') {
+    return `${cleanName} <${address}>`;
+  }
+  
+  // 否则只返回地址
+  return address;
+}
+
+function escapeHtml(text: string) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function buildMessage(to: string, parsed: Awaited<ReturnType<typeof parseRawEmail>>) {
   const fromInfo = parsed.from?.value?.[0];
   const toInfo = parsed.to?.value?.[0];
   const ccInfo = parsed.cc?.value?.[0];
 
-  const renderedFrom = formatAddress(fromInfo?.name, fromInfo?.address || 'unknown@example.com');
-  const renderedTo = formatAddress(toInfo?.name, toInfo?.address || 'unknown@example.com');
-  const renderedCc = ccInfo ? formatAddress(ccInfo.name, ccInfo.address || '') : '';
+  // 确保地址不为空，提供默认值
+  const renderedFrom = formatAddress(
+    fromInfo?.name, 
+    fromInfo?.address || 'unknown-sender@example.com'
+  );
+  const renderedTo = formatAddress(
+    toInfo?.name, 
+    toInfo?.address || 'unknown-recipient@example.com'
+  );
+  const renderedCc = ccInfo ? formatAddress(ccInfo.name, ccInfo.address || 'unknown-cc@example.com') : '';
 
   const summaryHtml = `
     <div style="background:#f3f4f6;padding:12px;border-radius:8px;font-size:13px;margin-bottom:16px;">
-      <p><strong>原始发件人：</strong>${renderedFrom}</p>
-      <p><strong>原始收件人：</strong>${renderedTo}</p>
-      ${renderedCc ? `<p><strong>抄送：</strong>${renderedCc}</p>` : ''}
+      <p><strong>原始发件人：</strong>${escapeHtml(renderedFrom)}</p>
+      <p><strong>原始收件人：</strong>${escapeHtml(renderedTo)}</p>${renderedCc ? `
+      <p><strong>抄送：</strong>${escapeHtml(renderedCc)}</p>` : ''}
     </div>
   `;
 
-  const summaryText = [
+  const summaryTextParts = [
     `原始发件人：${renderedFrom}`,
     `原始收件人：${renderedTo}`,
-    renderedCc ? `抄送：${renderedCc}` : '',
-    '---------------------------',
-    '',
-  ]
-    .filter(Boolean)
-    .join('\n');
+  ];
+  
+  if (renderedCc) {
+    summaryTextParts.push(`抄送：${renderedCc}`);
+  }
+  
+  summaryTextParts.push('---------------------------', '');
+  
+  const summaryText = summaryTextParts.join('\n');
 
   const html = parsed.html?.toString().trim()
     ? parsed.html.toString()
@@ -98,11 +135,4 @@ function buildMessage(to: string, parsed: Awaited<ReturnType<typeof parseRawEmai
       'Reply-To': SMTP_USER,
     },
   };
-}
-
-function formatAddress(name?: string, address?: string) {
-  if (!address) {
-    return 'unknown@example.com';
-  }
-  return name ? `${name} <${address}>` : address;
 }
