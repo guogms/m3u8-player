@@ -47,20 +47,22 @@ async function handleProxy(request: NextRequest, path: string[]) {
 }
 
 function resolveTargetUrl(request: NextRequest, path: string[]) {
-  const joined = path.join('/');
-  const fallback = request.nextUrl.searchParams.get('target');
-  const raw = joined || fallback;
-  if (!raw) return null;
-
-  const decoded = decodeURIComponent(raw);
   try {
-    return new URL(decoded);
-  } catch {
-    try {
-      return new URL(`https://${decoded}`);
-    } catch {
+    // 从完整URL中提取目标URL
+    const requestUrl = new URL(request.url);
+    const origin = requestUrl.origin;
+    const splitStr = origin.split('//')[1] + "/api/forward/";
+    const tempPath = requestUrl.href.split(splitStr).pop();
+    
+    if (!tempPath) {
       return null;
     }
+    
+    // 解码目标URL
+    const targetUrl = decodeURIComponent(tempPath);
+    return new URL(targetUrl);
+  } catch (error) {
+    return null;
   }
 }
 
