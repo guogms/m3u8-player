@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "build:cf": "npx @opennextjs/cloudflare build",
-    "build:github": "NEXT_CONFIG=next.config.github.mjs next build",
+    "build:github": "node scripts/build-github.js",
     "export": "next build && next export",
     "start": "next start",
     "lint": "next lint",

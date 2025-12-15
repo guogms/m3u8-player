@@ -38,8 +38,18 @@ jobs:
       - name: 构建项目
         run: pnpm run build:github
         env:
-          NEXT_CONFIG: next.config.github.mjs
           NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
+
+      - name: 检查构建结果
+        run: |
+          echo "🔍 检查 out 目录..."
+          if [ -d "out" ]; then
+            echo "✅ out 目录存在"
+            ls -la out/ | head -20
+          else
+            echo "❌ out 目录不存在"
+            exit 1
+          fi
 
       - name: 上传构建产物
         uses: actions/upload-pages-artifact@v3
