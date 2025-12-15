@@ -1,10 +1,4 @@
-#:schema node_modules/wrangler/config-schema.json
 name = "m3u8-player"
 compatibility_date = "2025-12-15"
 compatibility_flags = ["nodejs_compat"]
-
-# Cloudflare Pages 部署配置
-# 在 Cloudflare Pages 控制台中设置：
-# 构建命令: npx @cloudflare/next-on-pages@1
-# 构建输出目录: .vercel/output/static
 pages_build_output_dir = ".vercel/output/static"
