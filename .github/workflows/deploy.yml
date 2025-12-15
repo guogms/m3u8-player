@@ -36,10 +36,21 @@ jobs:
         run: pnpm install
 
       - name: 构建项目
-        run: pnpm run build:github
+        run: |
+          cp next.config.github.mjs next.config.mjs
+          pnpm run build
         env:
-          NEXT_CONFIG: next.config.github.mjs
           NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
+
+      - name: 检查构建产物
+        run: |
+          if [ ! -d "./out" ]; then
+            echo "Error: out directory not found!"
+            ls -la
+            exit 1
+          fi
+          echo "Build output found:"
+          ls -la ./out
 
       - name: 上传构建产物
         uses: actions/upload-pages-artifact@v3
