@@ -8,12 +8,22 @@ const githubConfig = path.join(__dirname, '..', 'next.config.github.mjs');
 const backupConfig = path.join(__dirname, '..', 'next.config.mjs.backup');
 const outDir = path.join(__dirname, '..', 'out');
 
+// API routes 目录
+const apiDir = path.join(__dirname, '..', 'app', 'api');
+const apiBackupDir = path.join(__dirname, '..', 'app', 'api.backup');
+
 try {
   console.log('📦 准备 GitHub Pages 构建...');
   
   // 备份原始配置
   fs.copyFileSync(originalConfig, backupConfig);
   console.log('✅ 已备份原始配置');
+  
+  // 备份并临时移除 API routes
+  if (fs.existsSync(apiDir)) {
+    fs.renameSync(apiDir, apiBackupDir);
+    console.log('✅ 已临时移除 API routes');
+  }
   
   // 使用 GitHub 配置
   fs.copyFileSync(githubConfig, originalConfig);
@@ -39,6 +49,12 @@ try {
     console.log('✅ 已恢复原始配置');
   }
   
+  // 恢复 API routes
+  if (fs.existsSync(apiBackupDir)) {
+    fs.renameSync(apiBackupDir, apiDir);
+    console.log('✅ 已恢复 API routes');
+  }
+  
 } catch (error) {
   console.error('❌ 构建失败:', error.message);
   
@@ -47,6 +63,12 @@ try {
     fs.copyFileSync(backupConfig, originalConfig);
     fs.unlinkSync(backupConfig);
     console.log('✅ 已恢复原始配置');
+  }
+  
+  // 恢复 API routes
+  if (fs.existsSync(apiBackupDir)) {
+    fs.renameSync(apiBackupDir, apiDir);
+    console.log('✅ 已恢复 API routes');
   }
   
   process.exit(1);
