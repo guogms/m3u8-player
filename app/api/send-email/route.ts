@@ -66,7 +66,6 @@ export async function POST(req: NextRequest) {
         port: 465,
         secure: true,
         auth: { user: "don-t-reply@qq.com", pass: "wwdaauseecmcbiff" },
-        tls: { rejectUnauthorized: false },
       });
 
       const mailOptions = {
