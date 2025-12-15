@@ -38,6 +38,7 @@ jobs:
       - name: 构建项目
         run: pnpm run build:github
         env:
+          NEXT_CONFIG: next.config.github.mjs
           NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
 
       - name: 上传构建产物
