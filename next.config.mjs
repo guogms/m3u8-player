@@ -16,6 +16,8 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  output: 'export',
+  basePath: process.env.NEXT_PUBLIC_BASE_PATH || '',
   experimental: {
     webpackBuildWorker: true,
     parallelServerBuildTraces: true,

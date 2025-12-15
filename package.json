@@ -6,10 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "build:cf": "npx @opennextjs/cloudflare build",
+    "build:github": "next build",
+    "export": "next build && next export",
     "start": "next start",
     "lint": "next lint",
     "preview": "npx @opennextjs/cloudflare build && npx @opennextjs/cloudflare preview",
-    "deploy": "npx @opennextjs/cloudflare build && npx @opennextjs/cloudflare deploy"
+    "deploy": "npx @opennextjs/cloudflare build && npx @opennextjs/cloudflare deploy",
+    "deploy:github": "pnpm run build:github && gh-pages -d out"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -73,6 +76,7 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "cross-env": "^10.1.0",
+    "gh-pages": "^6.3.0",
     "postcss": "^8",
     "tailwindcss": "^3.4.17",
     "typescript": "^5",
