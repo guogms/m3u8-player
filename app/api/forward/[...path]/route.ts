@@ -3,7 +3,8 @@ import { NextResponse } from 'next/server';
 
 const HOP_BY_HOP_HEADERS = new Set(['connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'te', 'trailers', 'transfer-encoding', 'upgrade']);
 
-export const runtime = 'edge';
+// 使用 Node.js runtime 以兼容 Cloudflare OpenNext
+export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest, { params }: { params: { path: string[] } }) {
   return handleProxy(request, params.path);
