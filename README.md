@@ -69,12 +69,49 @@ docker-compose logs -f
 2. 在 [Vercel](https://vercel.com) 导入项目
 3. 一键部署
 
-### Cloudflare Pages
+### Cloudflare Pages 部署
 
-```powershell
-pnpm build
-wrangler pages deploy .next
+使用 [@opennextjs/cloudflare](https://opennext.js.org/cloudflare) 部署到 Cloudflare Pages。
+
+**⚠️ Windows 用户注意**：OpenNext 在 Windows 上有兼容性问题，推荐使用以下方法：
+
+#### 方式一：GitHub Actions 自动部署（推荐）
+
+配置 GitHub Actions 实现自动部署，无需本地构建。
+
+1. 在 GitHub 仓库设置中配置 Secrets：
+   - `CLOUDFLARE_API_TOKEN`
+   - `CLOUDFLARE_ACCOUNT_ID`
+
+2. 推送代码到 `main` 分支，自动触发部署
+
+详见 [Cloudflare 部署指南](./docs/CLOUDFLARE_DEPLOY.md)
+
+#### 方式二：使用 WSL 手动部署
+
+在 WSL (Windows Subsystem for Linux) 中执行：
+
+```bash
+# 1. 构建 Cloudflare 版本
+pnpm run pages:build
+
+# 2. 部署到 Cloudflare Pages
+pnpm run pages:deploy
 ```
+
+#### 方式三：Linux/Mac 用户
+
+```bash
+# 构建并部署
+pnpm run pages:build
+pnpm run pages:deploy
+
+# 或者本地预览
+pnpm run pages:dev
+```
+
+**完整文档**: [Cloudflare 部署指南](./docs/CLOUDFLARE_DEPLOY.md)
+
 
 ## 🔧 环境变量配置
 

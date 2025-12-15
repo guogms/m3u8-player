@@ -21,9 +21,6 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   },
-  // Docker 部署：生成 standalone 输出
-  // 注意：Windows 上构建需要管理员权限或在 WSL/Docker 中构建
-  // output: 'standalone',
 }
 
 mergeConfig(nextConfig, userConfig)
