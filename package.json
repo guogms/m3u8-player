@@ -5,11 +5,11 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:cf": "cross-env CLOUDFLARE_WORKERS=true opennextjs-cloudflare build",
+    "build:cf": "npx @opennextjs/cloudflare build",
     "start": "next start",
     "lint": "next lint",
-    "preview": "cross-env CLOUDFLARE_WORKERS=true opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "cross-env CLOUDFLARE_WORKERS=true opennextjs-cloudflare build && opennextjs-cloudflare deploy"
+    "preview": "npx @opennextjs/cloudflare build && npx @opennextjs/cloudflare preview",
+    "deploy": "npx @opennextjs/cloudflare build && npx @opennextjs/cloudflare deploy"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
