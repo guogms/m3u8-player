@@ -1,0 +1,6 @@
+{
+  "build": {
+    "command": "pnpm run pages:build",
+    "output_directory": ".open-next/worker"
+  }
+}
