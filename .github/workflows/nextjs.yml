@@ -2,7 +2,7 @@
 #
 # Next.js 入门文档: https://nextjs.org/docs/getting-started
 #
-name: 部署 Next.js 站点到 Pages
+name: 部署 Next.js 站点到 Pages(只能部署静态)
 
 on:
   # 当推送到默认分支时运行
