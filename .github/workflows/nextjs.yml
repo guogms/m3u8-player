@@ -83,6 +83,12 @@ jobs:
             ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock', '**/pnpm-lock.yaml') }}-
       - name: 安装依赖
         run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
+      - name: 准备静态导出
+        run: |
+          # 删除无法静态导出的 API 路由
+          rm -rf app/api
+          # 使用 GitHub Pages 专用配置
+          cp next.config.github.mjs next.config.mjs
       - name: Build with Next.js
         run: ${{ steps.detect-package-manager.outputs.runner }} next build
       - name: Upload artifact
